@@ -183,6 +183,7 @@ def test_generation_failure_is_explicit(monkeypatch, facts):
 
 
 def test_groq_generation_uses_private_key_and_strict_schema(monkeypatch, facts, prose):
+    monkeypatch.setattr("goal_illusion.narrative._review_groq", lambda *args: None)
     calls = []
     monkeypatch.setenv("GROQ_API_KEY", "test-private-key")
 
@@ -225,6 +226,39 @@ def test_groq_missing_key_makes_no_request(monkeypatch, facts):
         generate_narrative(facts, provider="groq")
 
 
+@pytest.mark.parametrize("approved", [True, False])
+def test_semantic_review_can_reject_structurally_valid_prose(monkeypatch, facts, prose, approved):
+    from goal_illusion.narrative import _review_groq
+
+    class Response:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {
+                            "content": json.dumps(
+                                {"approved": approved, "reason": "Kontrol sonucu"}
+                            ),
+                        },
+                    }
+                ]
+            }
+
+    monkeypatch.setattr("goal_illusion.narrative.requests.post", lambda *a, **kw: Response())
+    monkeypatch.setattr("goal_illusion.narrative.time.sleep", lambda *a: None)
+    if approved:
+        _review_groq(prose, facts, "test-key", "test-model")
+    else:
+        with pytest.raises(DataError, match="Anlam kontrolü"):
+            _review_groq(prose, facts, "test-key", "test-model")
+
+
 @pytest.mark.parametrize(
     "claim", ["galibiyeti garanti etti", "galibiyeti öngörüyordu", "sonucu belirledi"]
 )
@@ -234,6 +268,7 @@ def test_certainty_is_rejected(facts, prose, claim):
 
 
 def test_groq_rate_limit_waits_then_recovers(monkeypatch, facts, prose):
+    monkeypatch.setattr("goal_illusion.narrative._review_groq", lambda *args: None)
     monkeypatch.setenv("GROQ_API_KEY", "test-key")
     delays = []
     calls = []
