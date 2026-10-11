@@ -120,6 +120,16 @@ def test_local_story_generation_renders_original_headline(monkeypatch):
     from goal_illusion import narrative as narrative_module
     from goal_illusion.narrative import PROMPT_VERSION
 
+    original_read = Path.read_text
+
+    def without_published_story(path, *args, **kwargs):
+        if path == APP_PATH.parent / "web/data/stories.json":
+            return '{"stories":{}}'
+        return original_read(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", without_published_story)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+
     def fake_generate(facts, **kwargs):
         return {
             "headline": "Tabeladaki farkın arkasında İngiltere'nin daha kaliteli fırsatları var.",
