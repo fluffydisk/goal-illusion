@@ -83,3 +83,15 @@ Küçük yerel modeller gerçek maç denemelerinde yeterli kaliteyi sağlayamad�
 bağlantısı eklendi ve gerçek API çıktıları denendi. Ters takım karşılaştırması ve
 nedensellik hataları nedeniyle açık sayısal ilişkiler ve ayrı anlam kontrolü eklendi. Dilin/anlamın kusursuzluğu otomatik kontrollerle garanti edilemez. Şut verisinden tüm oyunun kalitesi
 çıkarılamaz; daha kapsamlı futbol yorumu için yeni veri sinyalleri gerekir.
+
+
+## Talep üzerine AI analizi — güncel karar
+
+- Hazır, veriyle eşleşen yorum açılışta gösterilir. Hazır yorum yoksa **AI analizi üret** düğmesi vardır.
+- Otomatik toplu üretim durdurulur; Actions yalnızca verileri/kanıtları ve mevcut yorumları yeniler.
+- Pages arayüzüne Cloudflare Worker + SQLite Durable Object eklenir. API anahtarı sunucu secret'ıdır.
+- Tek ortak sıra, aynı maç/parmak izi için tek üretim, kalıcı önbellek ve veri değişiminde geçersizleştirme.
+- Widget gerçek sunucu aşamalarını, geçen süreyi ve tahmini bekleme aralığını gösterir; sahte yüzde yoktur.
+- Güçlü Groq modeli, yüksek reasoning, deterministik kontroller ve ayrı editör çağrısı; kalite geçmezse yayın yok.
+- Maç istemciden gelen veriyle analiz edilmez: Worker yayımlanmış kanıtları kendisi okur.
+- İstemci başına 10 dakikada 3 yeni istek, en fazla 10 sıradaki iş ve günde 80 yeni üretim sınırı.

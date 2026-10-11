@@ -16,6 +16,7 @@ from goal_illusion.narrative import (  # noqa: E402
     NarrativeRateLimitError,
     generate_narrative,
     narrative_matches,
+    prompt_facts,
 )
 from goal_illusion.story import STORY_VERSION, build_evidence, match_from_snapshot  # noqa: E402
 
@@ -80,6 +81,7 @@ def generate(
         )
         result["stories"][key] = {
             "facts": facts,
+            "model_facts": prompt_facts(facts),
             "narrative": cached if valid else None,
             "status": "ready" if valid else "pending",
             "failed_attempts": failures,

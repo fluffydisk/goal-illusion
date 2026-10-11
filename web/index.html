@@ -21,6 +21,15 @@
 <span class="eyebrow" id="story-label">MAÇIN HİKÂYESİ</span>
 <h2 id="story-headline">Maçın şut verilerini keşfet.</h2>
 <p id="story-explanation"></p>
+<div id="ai-controls" hidden>
+<button id="generate-ai" type="button">AI analizi üret</button>
+<div id="ai-progress" class="ai-progress" hidden role="status" aria-live="polite">
+<div class="ai-stage"><span class="ai-spinner" aria-hidden="true"></span><strong id="ai-phase"></strong></div>
+<p id="ai-elapsed"></p><p id="ai-estimate" class="muted"></p>
+<ol class="ai-steps"><li data-stage="queued">Sıra</li><li data-stage="generating">Yorum</li><li data-stage="reviewing">Doğruluk kontrolü</li></ol>
+</div>
+<p id="ai-message" class="muted"></p>
+</div>
 <div id="story-evidence" class="evidence-grid"></div>
 <p class="story-note" id="story-note"></p>
 <a href="#metrics">Detaylı analize geç ↓</a>

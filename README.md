@@ -150,7 +150,8 @@ Maç seçildiğinde en üstte o maça özel bir başlık, kısa açıklama ve bu
 kanıt kartları görünür. Metin sabit cümlelerden seçilmez: Groq üzerinden
 `openai/gpt-oss-120b` modeline maç bulguları gönderilerek üretilir.
 Ücretsiz planın kotası kullanılır; kota dolunca mevcut analiz kullanılabilir kalır.
-GitHub Pages model çalıştırmaz; güncelleme sırasında üretilen metni yayımlar.
+GitHub Pages arayüzü sunar; yeni yorum yalnızca ziyaretçi **AI analizi üret** düğmesine
+bastığında Cloudflare Worker üzerinden üretilir. Actions otomatik AI üretmez.
 Ziyaretçiler model indirmez, API anahtarı veya hesap gerekmez.
 
 Kanıt katmanı toplam xG, şut başına xG, devrelere göre xG, kendi kalesine goller hariç
@@ -172,14 +173,19 @@ cümle yeni istatistiklere iliştirilmez. Model erişilemez veya çıktı kontro
 AI yorumun hazır olmadığı belirtilir; sayısal analiz ve kanıtlar kullanılabilir kalır.
 Hazır bir şablon AI yorumu gibi sunulmaz. Kaynak xG uyarıları korunur.
 
-GitHub Actions kurulumu: Groq anahtarını depo **Settings → Secrets and variables →
-Actions** bölümüne `GROQ_API_KEY` adıyla ekle. Anahtar kaynak koda veya `web/` içine
-konmaz. Actions yalnızca maçın sayısal bulgularını API’ye gönderir ve hazır metni yayımlar.
-Anahtar yoksa yalnızca kanıtlar hazırlanır. İlk kalite kontrolü için Actions işini
-`preview=true`, `story_limit=3` ile çalıştır; `match-stories` çıktısını incele. Önizleme
-siteyi değiştirmez ve ayrı önbellek kullanır. Yorumlar kontrol edildikten sonra depo
-Actions değişkeni `ENABLE_AI_STORIES=true` ayarlanarak düzenli üretim açılır. Yerel Groq üretiminde anahtarı ortam değişkeni
-olarak sağla; komut `uv run python scripts/generate_stories.py --provider groq`.
+İstek üzerine üretimin kurulumu `service/README.md` içinde anlatılır. Groq anahtarı
+Worker secret olarak saklanır; kaynak koda veya tarayıcıya konmaz. GitHub Actions
+altı saatte bir yalnızca maç verisini ve kanıtlarını yeniler, mevcut yorumları korur.
+Yeni/değişmiş maçlar ziyaretçi isteğini bekler. Aynı maç için eşzamanlı istekler tek
+işte birleşir; hazır sonuç veri parmak iziyle ortak ve kalıcı olarak saklanır.
+
+Widget sırada bekleme, yorum üretimi ve ayrı doğruluk kontrolünü gösterir. Geçen süre
+ve tahmini bekleme aralığı sunulur; sağlayıcının gerçek ilerlemesi bilinmediği için
+kesin yüzde veya kesin bitiş zamanı gösterilmez. Yenileme/başka maça geçme sunucudaki
+üretimi iptal etmez. API kotasında ya da kalite sorunununda yeniden deneme sunulur.
+Güçlü `openai/gpt-oss-120b` modeli yüksek reasoning ayarıyla kullanılır; küçük modele
+otomatik geçilmez. Üretimden sonra ayrı editör çağrısı ve yerel yapı/kanıt/sayı
+kontrolleri zorunludur. İkinci deneme de geçmezse metin yayımlanmaz.
 
 Deneysel yerel alternatif (küçük modelin Türkçesi ve yorumları gerçek maç denemelerinde
 beklenen kalitede değildi; otomatik yayında kullanılmaz):
@@ -196,31 +202,9 @@ Streamlit ekranında hazır yorum kullanılır. Yeni/eskiden yayımlanmayan maç
 adres seçilebilir. `--limit 3` yalnızca ilk üç eksik yorumu üretir; tüm maçların
 kanıtları yine yazılır. `--evidence-only` model çağrısı yapmaz.
 
-Actions her veri güncellemesinde henüz denenmemiş maçları en yeniden eskiye işleyerek en fazla yirmi
-eksik/değişmiş yorumu üretir; geçerli yorumları önbellekte tutar. Sonraki
-çalışmalar kalan maçlarla devam eder; analiz kapsamı daraltılmaz. Elle çalıştırmada
-`story_limit` artırılarak bütün eksik yorumlar tek çalışmada üretilebilir.
-Groq çağrıları arasında kota için beklenir; sınırlama yanıtında bir tekrar denemesi yapılır.
-API erişimi başarısız olsa da kanıtlarla site yayımlanır. Her üretilen metin için ayrıca anlam kontrolü çağrısı yapılır. İlk gerçek API
-önizlemesinde ters takım karşılaştırması saptandığı için girdilere açık karşılaştırmalar
-eklendi; yanlış nedensellik ifadeleri de reddedilir.
-
-Reddedilen yorumlar yeniden denenebilir; başarısız deneme sayısı yüksek maçlar, hiç
-denenmemiş maçların önünü kesmemesi için kuyruğun gerisine alınır.
-
-Yayın sonrası yeni yorum üretildiyse ve eksik maç varsa bir sonraki paket otomatik
-başlatılır. İlerleme yoksa zincir durur; düzenli veri güncellemesi daha sonra tekrar
-dener. Maç listesinde hazır yorumlar AI işaretiyle gösterilir ve lig bazlı kapsam
-ekranda belirtilir.
-
-Kota sınırlaması HTTP 429 ile devam ederse mevcut paketin hazır yorumları korunup
-yayımlanır; kalan maçlar başarısız yorum sayılmaz ve otomatik zincir durur. Kota
-yenilendiğinde düzenli iş yeniden dener. Üretim özeti hazır/denenen/reddedilen
-maç sayılarını açıkça gösterir.
-
 Mevcut arşivin 105 maçı için Codex, hesaplanan maç bulgularını okuyarak her maça ayrı
 özgün yorum hazırladı. Bu başlangıç arşivi `web/data/reviewed-stories.json` içinde
 `provider=assistant`, `model=Codex` kaynağıyla tutulur; Groq çıktısı olarak etiketlenmez.
 Üretim bu kayıtları yalnızca maç parmak izi eşleşiyorsa kullanır. Veri değişirse kayıt
-geçersiz olur ve Groq yeniden üretir. Yeni maçlar da Groq üzerinden üretilir. Bu dosya
+geçersiz olur; ziyaretçi talep ettiğinde Groq yeniden üretir. Yeni maçlar da talep üzerine Groq üzerinden üretilir. Bu dosya
 cümle şablonları içermez; her kayıt belirli bir maçın sayısal bulgularına aittir.

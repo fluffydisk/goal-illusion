@@ -1,0 +1,15 @@
+{
+  "name": "goal-illusion-ai",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-11",
+  "workers_dev": true,
+  "vars": {
+    "SITE_ORIGIN": "https://fluffydisk.github.io",
+    "STORIES_URL": "https://fluffydisk.github.io/goal-illusion/data/stories.json",
+    "DAILY_GENERATION_LIMIT": "80"
+  },
+  "durable_objects": {
+    "bindings": [{"name": "ANALYSES", "class_name": "AnalysisQueue"}]
+  },
+  "migrations": [{"tag": "v1", "new_sqlite_classes": ["AnalysisQueue"]}]
+}

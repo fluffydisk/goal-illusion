@@ -3,15 +3,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      story_limit:
-        description: Maximum new AI stories in this run
-        default: '20'
-        required: true
-      preview:
-        description: Generate AI stories for review without deploying
-        type: boolean
-        default: false
   schedule:
     - cron: '17 */6 * * *'
 permissions:
@@ -23,10 +14,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    outputs:
-      created: ${{ steps.coverage.outputs.created }}
-      remaining: ${{ steps.coverage.outputs.remaining }}
-      rate_limited: ${{ steps.coverage.outputs.rate_limited }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -43,43 +30,16 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: web/data/stories.json
-          key: stories-v7b-${{ inputs.preview == true && 'preview' || 'published' }}-${{ github.run_id }}
-          restore-keys: stories-v7b-${{ inputs.preview == true && 'preview' || 'published' }}-
-      - name: Generate match stories
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          STORY_LIMIT: ${{ inputs.story_limit || '20' }}
-          AI_ENABLED: ${{ vars.ENABLE_AI_STORIES == 'true' || inputs.preview == true }}
-        run: |
-          if [ -n "$GROQ_API_KEY" ] && [ "$AI_ENABLED" = 'true' ]; then
-            python scripts/generate_stories.py --provider groq --limit "$STORY_LIMIT"
-          else
-            python scripts/generate_stories.py --provider groq --evidence-only
-          fi
-      - name: Save stories for review
-        uses: actions/upload-artifact@v4
-        with:
-          name: match-stories
-          path: web/data/stories.json
-      - name: Record AI coverage
-        id: coverage
-        run: |
-          python - <<'PY'
-          import json, os
-          data = json.load(open('web/data/stories.json'))
-          generation = data.get('generation', {})
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
-              output.write(f"created={generation.get('created', 0)}\n")
-              output.write(f"remaining={generation.get('total', 0) - generation.get('ready', 0)}\n")
-              output.write(f"rate_limited={str(generation.get('rate_limited', False)).lower()}\n")
-          PY
+          key: stories-v7b-published-${{ github.run_id }}
+          restore-keys: stories-v7b-published-
+      - name: Refresh evidence and preserve existing analyses
+        run: python scripts/generate_stories.py --provider groq --evidence-only
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
           path: web
   deploy:
     needs: build
-    if: inputs.preview != true
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -91,15 +51,3 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
-  continue_backlog:
-    needs: [build, deploy]
-    if: needs.build.outputs.created > 0 && needs.build.outputs.remaining > 0 && needs.build.outputs.rate_limited != 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-    steps:
-      - name: Continue missing stories after publication
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: gh workflow run pages.yml --repo "$GH_REPO" -f story_limit=20 -f preview=false
