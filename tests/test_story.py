@@ -428,3 +428,48 @@ def test_quota_stops_batch_and_preserves_unattempted_matches(monkeypatch, tmp_pa
     assert result["generation"]["rate_limited"] is True
     assert result["stories"][str(data.match.id)]["status"] == "pending"
     assert json.loads(dest.read_text())["generation"] == result["generation"]
+
+
+def test_reviewed_seed_requires_matching_data_and_keeps_honest_provenance(
+    monkeypatch, tmp_path, prose
+):
+    from dataclasses import asdict
+
+    data = load_example()
+    source, dest, seed = (tmp_path / name for name in ("matches.json", "stories.json", "seed.json"))
+    source.write_text(json.dumps({"updated_at": "now", "matches": [asdict(data)]}))
+    facts = build_evidence(data)
+    seed.write_text(
+        json.dumps(
+            {
+                "stories": {
+                    str(data.match.id): {
+                        **prose,
+                        "fingerprint": facts["fingerprint"],
+                        "story_version": 1,
+                        "prompt_version": PROMPT_VERSION,
+                        "provider": "assistant",
+                        "model": "Codex",
+                    }
+                }
+            }
+        )
+    )
+    calls = []
+
+    def unavailable(*args, **kwargs):
+        calls.append(1)
+        raise DataError("Unavailable")
+
+    monkeypatch.setattr("scripts.generate_stories.generate_narrative", unavailable)
+    result = generate(source, dest, base_url="http://local", provider="groq", seed_path=seed)
+    story = result["stories"][str(data.match.id)]
+    assert story["status"] == "ready"
+    assert story["narrative"]["provider"] == "assistant"
+    assert calls == []
+    source.write_text(
+        json.dumps({"updated_at": "later", "matches": [asdict(replace(data, home_score=4))]})
+    )
+    result = generate(source, dest, base_url="http://local", provider="groq", seed_path=seed)
+    assert result["stories"][str(data.match.id)]["narrative"] is None
+    assert calls == [1]

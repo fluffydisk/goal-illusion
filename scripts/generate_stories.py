@@ -29,6 +29,7 @@ def generate(
     limit: int | None = None,
     evidence_only: bool = False,
     provider: str = "ollama",
+    seed_path: Path | None = None,
 ) -> dict:
     snapshot = json.loads(matches_path.read_text())
     records = snapshot["matches"]
@@ -36,6 +37,11 @@ def generate(
         previous = json.loads(destination.read_text()) if destination.exists() else {}
     except (ValueError, OSError):
         previous = {}
+    seeds = (
+        json.loads(seed_path.read_text()).get("stories", {})
+        if seed_path and seed_path.exists()
+        else {}
+    )
     result = {
         "version": STORY_VERSION,
         "updated_at": datetime.now(UTC).isoformat(),
@@ -55,16 +61,22 @@ def generate(
         key = str(facts["match_id"])
         old = previous.get("stories", {}).get(key, {})
         cached = old.get("narrative")
+        seed = seeds.get(key)
+        if (
+            narrative_matches(seed, facts)
+            and seed.get("provider") == "assistant"
+            and seed.get("model") == "Codex"
+        ):
+            cached = seed
         same_input = old.get("facts", {}).get("fingerprint") == facts["fingerprint"]
         failures = (
             old.get("failed_attempts", 0)
             if same_input and old.get("validation_revision") == 2
             else 0
         )
-        valid = (
-            narrative_matches(cached, facts)
-            and cached.get("model") == model
-            and cached.get("provider", "ollama") == provider
+        valid = narrative_matches(cached, facts) and (
+            (cached.get("model") == model and cached.get("provider", "ollama") == provider)
+            or (cached.get("provider") == "assistant" and cached.get("model") == "Codex")
         )
         result["stories"][key] = {
             "facts": facts,
@@ -138,6 +150,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--provider", choices=["groq", "ollama"], default="ollama")
     parser.add_argument("--model")
+    parser.add_argument("--seed", type=Path, default=Path("web/data/reviewed-stories.json"))
     parser.add_argument("--limit", type=int)
     parser.add_argument("--evidence-only", action="store_true")
     args = parser.parse_args()
@@ -147,6 +160,7 @@ if __name__ == "__main__":
         base_url=args.base_url,
         model=args.model or (GROQ_MODEL if args.provider == "groq" else DEFAULT_MODEL),
         provider=args.provider,
+        seed_path=args.seed,
         limit=args.limit,
         evidence_only=args.evidence_only,
     )

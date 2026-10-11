@@ -217,3 +217,10 @@ Kota sınırlaması HTTP 429 ile devam ederse mevcut paketin hazır yorumları k
 yayımlanır; kalan maçlar başarısız yorum sayılmaz ve otomatik zincir durur. Kota
 yenilendiğinde düzenli iş yeniden dener. Üretim özeti hazır/denenen/reddedilen
 maç sayılarını açıkça gösterir.
+
+Mevcut arşivin 105 maçı için Codex, hesaplanan maç bulgularını okuyarak her maça ayrı
+özgün yorum hazırladı. Bu başlangıç arşivi `web/data/reviewed-stories.json` içinde
+`provider=assistant`, `model=Codex` kaynağıyla tutulur; Groq çıktısı olarak etiketlenmez.
+Üretim bu kayıtları yalnızca maç parmak izi eşleşiyorsa kullanır. Veri değişirse kayıt
+geçersiz olur ve Groq yeniden üretir. Yeni maçlar da Groq üzerinden üretilir. Bu dosya
+cümle şablonları içermez; her kayıt belirli bir maçın sayısal bulgularına aittir.
