@@ -1,5 +1,7 @@
 """Başlat: uv run streamlit run app.py"""
 
+import json
+import os
 from html import escape
 from pathlib import Path
 
@@ -23,6 +25,14 @@ from goal_illusion.fotmob import (
     normalize_fotmob,
     seasons_from_league,
 )
+from goal_illusion.narrative import (
+    DEFAULT_MODEL,
+    GROQ_MODEL,
+    PROMPT_VERSION,
+    generate_narrative,
+    narrative_matches,
+)
+from goal_illusion.story import build_evidence
 
 st.set_page_config(
     page_title="Goal Illusion · Skorun arkasındaki gerçek", page_icon="⚽", layout="wide"
@@ -178,6 +188,58 @@ result = analyze(
 )
 score_probability = result.score_probability(data.home_score, data.away_score)
 top_scores = result.top_scores()
+
+facts = build_evidence(data)
+try:
+    published = json.loads((Path(__file__).parent / "web/data/stories.json").read_text())
+    narrative = published.get("stories", {}).get(str(match.id), {}).get("narrative")
+except (OSError, ValueError):
+    narrative = None
+key = f"narrative:{PROMPT_VERSION}:{facts['fingerprint']}"
+narrative = st.session_state.get(key, narrative)
+if not narrative_matches(narrative, facts):
+    narrative = None
+
+with st.container(border=True):
+    st.caption("MAÇIN HİKÂYESİ · AI YORUMU" if narrative else "MAÇIN BULGULARI")
+    if narrative:
+        st.subheader(narrative["headline"])
+        st.write(narrative["explanation"])
+    else:
+        st.subheader("Bu maçın AI yorumu henüz hazır değil.")
+        use_groq = bool(os.getenv("GROQ_API_KEY"))
+        if st.button("Maç yorumunu üret" if use_groq else "Yerel modelle maç yorumunu üret"):
+            try:
+                with st.spinner("Maç bulgularından özgün yorum üretiliyor…"):
+                    narrative = generate_narrative(
+                        facts,
+                        base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"),
+                        provider="groq" if use_groq else "ollama",
+                        model=GROQ_MODEL if use_groq else DEFAULT_MODEL,
+                    )
+                st.session_state[key] = narrative
+                st.rerun()
+            except DataError as error:
+                st.warning(str(error))
+                st.caption(
+                    "Groq bağlantısını ve ücretsiz kotayı kontrol edebilirsin."
+                    if use_groq
+                    else "Yerel model deneyseldir; Ollama servisi gerekir."
+                )
+    evidence_by_id = {e["id"]: e for e in facts["evidence"]}
+    selected_ids = narrative["evidence_ids"] if narrative else list(evidence_by_id)[:3]
+    for evidence_id in selected_ids:
+        evidence = evidence_by_id[evidence_id]
+        st.markdown(f"**{evidence['label']}**")
+        st.write(evidence["text"])
+    st.caption(
+        "Yorum model tarafından, sayısal kanıtlar hesaplama katmanında üretilir. "
+        "Gerçekleşmiş şutlarla sınırlıdır; tüm oyun performansını veya hak edilen sonucu ölçmez."
+    )
+with st.expander("Tüm analiz bulguları"):
+    for evidence in facts["evidence"]:
+        st.markdown(f"**{evidence['label']}**")
+        st.write(evidence["text"])
 
 st.markdown(
     f"""

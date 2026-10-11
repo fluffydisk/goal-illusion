@@ -114,3 +114,27 @@ def test_fotmob_lig_season_match_selection(monkeypatch):
     assert len(app.get("plotly_chart")) == 4
     app.sidebar.selectbox[0].set_value("Bundesliga · Almanya").run(timeout=30)
     assert not app.exception
+
+
+def test_local_story_generation_renders_original_headline(monkeypatch):
+    from goal_illusion import narrative as narrative_module
+    from goal_illusion.narrative import PROMPT_VERSION
+
+    def fake_generate(facts, **kwargs):
+        return {
+            "headline": "Tabeladaki farkın arkasında İngiltere'nin daha kaliteli fırsatları var.",
+            "explanation": "İngiltere'nin ürettiği fırsatlar galibiyeti destekliyor. "
+            "Gol farkı, şutların alternatif sonuçlarıyla birlikte değerlendirilmelidir.",
+            "evidence_ids": ["chances", "outcomes"],
+            "fingerprint": facts["fingerprint"],
+            "story_version": 1,
+            "prompt_version": PROMPT_VERSION,
+        }
+
+    monkeypatch.setattr(narrative_module, "generate_narrative", fake_generate)
+    app = AppTest.from_file(str(APP_PATH)).run(timeout=30)
+    button = next(b for b in app.button if b.label == "Yerel modelle maç yorumunu üret")
+    button.click().run(timeout=30)
+    assert not app.exception
+    assert any("Tabeladaki farkın" in heading.value for heading in app.subheader)
+    assert len(app.metric) == 4

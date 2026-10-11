@@ -1,8 +1,9 @@
-# Goal Illusion — MVP kararları
+# Goal Illusion — Geliştirme planı ve kararlar
 
 Türkçe, bilgisayarda çalışan bir Streamlit paneli. Kullanıcı gerçek bir maçın skorunu,
-şut kalitesini ve aynı şutlardan oluşabilecek skorları karşılaştırır. AI geliştirme
-yardımcısıdır; üründe dil modeli veya ücretli API yoktur.
+şut kalitesini ve aynı şutlardan oluşabilecek skorları karşılaştırır. İlk sürümde AI
+yalnızca geliştirme yardımcısıydı; hikâye katmanında ücretsiz bir dil modeli eklenir.
+Nihai ürün hedefleri korunur; aşamalar yalnızca uygulama sırasını belirler.
 
 ## İlk sürüm
 
@@ -32,8 +33,8 @@ Tek komutla açılan uygulamada gerçek bir maç için kartlar ve grafikler tuta
 elle hesaplanabilen skorları ve uç durumları doğrulamalı. Veri ve uygulama testleri
 uzatma, kendi kalesine gol, seri penaltı, ağ hatası ve yeniden denemeyi kapsamalı.
 
-Canlı maç, hesap sistemi, CSV yükleme, kendi xG modelimiz ve buluta yayın sonraki
-sürümlere bırakıldı. Kullanıcının dersleri yanında sürdürebileceği bir hobi MVP'sidir.
+İlk sürümde canlı maç, hesap sistemi, CSV yükleme, kendi xG modelimiz ve buluta yayın
+ertelenmişti. GitHub Pages yayını aşağıdaki genişletmede tamamlandı.
 
 ## Güncel ligler — 11 Ekim 2026 genişletmesi
 
@@ -58,3 +59,26 @@ Pages için `web/` içinde tarayıcıda çalışan bağımsız uygulama eklenir.
 JavaScript hesabı Python referansı ile doğrulanır. Güncel sezon verisi GitHub Actions
 üzerinden altı saatte bir alınır; doğrudan ziyaretçi tarayıcısından FotMob’a istek yapılmaz.
 Kaynak hataları mevcut doğrulanmış maçları silmez. Maç ID’li paylaşım bağlantıları vardır.
+
+## Hikâye ve kanıt katmanı
+
+Nihai amaç korunur: taraftar maç seçince veriden üretilmiş özgün bir üst cümle görür,
+aşağı kaydırınca bu yorumu destekleyen bulgulara ve ayrıntılı grafiklere erişir.
+
+1. **Kanıt:** toplam/ortalama xG, devreler, şut golleri–xG, olası sonuçlar ve skor
+   farkının yönlü kuyruk olasılığı; kendi kalesine goller ayrı değerlendirilir.
+2. **Özgün metin:** Groq ücretsiz kotası ve güçlü model ile veriye dayalı Türkçe başlık ve kısa açıklama;
+   sabit if/else başlıkları kullanılmaz. Kanıt kimlikleri model çıktısında korunur.
+3. **Sunum:** Pages ve Streamlit'te üstte yorum, hemen altında seçilmiş kanıtlar;
+   mevcut ayrıntılı istatistikler aşağıda korunur.
+4. **Ücretsiz yayın:** Actions yeni/değişen maçlara metin üretip statik dosya yayımlar;
+   değişmeyen maçlarda yorum tekrar üretilmez. Yayın süresini sınırlamak için her
+   çalışmada yirmi eksik yorum üretilir; sonraki çalışmalar kalan maçlarla devam eder.
+   Nihai kapsam bütün doğrulanmış maçlardır. Ziyaretçiler model çalıştırmaz.
+5. **Doğrulama:** yapı, kanıt, sayı/HTML ve belirli desteklenmeyen iddia kontrolleri;
+   eski yorumları parmak iziyle geçersiz kılma. Model yokken yorum uydurulmaz.
+
+Küçük yerel modeller gerçek maç denemelerinde yeterli kaliteyi sağlayamadı. Groq
+bağlantısı eklendi; gerçek API çıktılarının dil/anlam kontrolü anahtar eklendikten
+sonra tamamlanacak. Dilin/anlamın kusursuzluğu otomatik kontrollerle garanti edilemez. Şut verisinden tüm oyunun kalitesi
+çıkarılamaz; daha kapsamlı futbol yorumu için yeni veri sinyalleri gerekir.

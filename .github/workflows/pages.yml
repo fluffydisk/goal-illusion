@@ -3,6 +3,15 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      story_limit:
+        description: Maximum new AI stories in this run
+        default: '20'
+        required: true
+      preview:
+        description: Generate AI stories for review without deploying
+        type: boolean
+        default: false
   schedule:
     - cron: '17 */6 * * *'
 permissions:
@@ -13,12 +22,13 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - run: pip install requests
+      - run: pip install requests numpy
       - uses: actions/cache@v4
         with:
           path: web/data/matches.json
@@ -26,12 +36,34 @@ jobs:
           restore-keys: matches-
       - name: Refresh completed matches
         run: python scripts/export_pages.py
+      - uses: actions/cache@v4
+        with:
+          path: web/data/stories.json
+          key: stories-v5-${{ inputs.preview == true && 'preview' || 'published' }}-${{ github.run_id }}
+          restore-keys: stories-v5-${{ inputs.preview == true && 'preview' || 'published' }}-
+      - name: Generate match stories
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          STORY_LIMIT: ${{ inputs.story_limit || '20' }}
+          AI_ENABLED: ${{ vars.ENABLE_AI_STORIES == 'true' || inputs.preview == true }}
+        run: |
+          if [ -n "$GROQ_API_KEY" ] && [ "$AI_ENABLED" = 'true' ]; then
+            python scripts/generate_stories.py --provider groq --limit "$STORY_LIMIT"
+          else
+            python scripts/generate_stories.py --provider groq --evidence-only
+          fi
+      - name: Save stories for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: match-stories
+          path: web/data/stories.json
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
           path: web
   deploy:
     needs: build
+    if: inputs.preview != true
     runs-on: ubuntu-latest
     permissions:
       pages: write

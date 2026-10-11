@@ -17,8 +17,17 @@
 <section class="selectors" aria-label="Maç seçimi"><label for="league">Lig<select aria-label="Lig" id="league"></select></label><label for="match">Maç<select aria-label="Maç" id="match"></select></label></section>
 <p id="status" role="status">Maç verileri yükleniyor…</p>
 <div id="analysis" hidden>
+<section id="story" class="story" aria-label="Maçın hikâyesi" aria-live="polite">
+<span class="eyebrow" id="story-label">MAÇIN HİKÂYESİ</span>
+<h2 id="story-headline">Maçın şut verilerini keşfet.</h2>
+<p id="story-explanation"></p>
+<div id="story-evidence" class="evidence-grid"></div>
+<p class="story-note" id="story-note"></p>
+<a href="#metrics">Detaylı analize geç ↓</a>
+</section>
 <section class="scoreboard"><p id="competition" class="eyebrow"></p><div class="scoreline"><h2 id="home"></h2><strong id="score"></strong><h2 id="away"></h2></div><p id="date"></p></section>
 <div id="metrics" class="metrics"></div>
+<details class="panel"><summary>Tüm analiz bulguları</summary><div id="all-evidence" class="evidence-grid"></div></details>
 <section class="panel"><h2>Aynı şutlar, olası sonuçlar</h2><p class="muted">Her şutun xG değerinden hesaplanan tam olasılık dağılımı.</p><div id="outcomes"></div><p id="insight" class="insight"></p></section>
 <div class="grid"><section class="panel"><h2>Olası skorlar</h2><div id="heatmap" class="heatmap"></div><p id="tail" class="muted"></p></section><section class="panel"><h2>En olası 5 skor</h2><div id="top"></div></section></div>
 <section class="panel"><h2>Şut haritası</h2><p class="muted">İki takım da sağdaki kaleye hücum edecek şekilde gösterilir. Büyük daire = yüksek xG · ★ = gol. Şuta dokunarak detayını gör.</p><div id="legend" class="legend"></div><div id="pitch"></div><p id="shot-detail" role="status">Bir şut seç.</p></section>

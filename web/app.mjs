@@ -6,7 +6,27 @@ const colors = ['#6de4ae','#77b5f5'];
 function el(tag, text, className) { const e=document.createElement(tag); e.textContent=text; if(className)e.className=className; return e; }
 function svgNode(tag,attrs={}) { const e=document.createElementNS('http://www.w3.org/2000/svg',tag); for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v); return e; }
 function graphic(container,viewBox,label) {const svg=svgNode('svg',{viewBox,role:'img','aria-label':label}); $(container).replaceChildren(svg);return svg;}
-let snapshot, available;
+let snapshot, available, stories;
+function renderStory(d, a, sums) {
+  const item=stories?.source_updated_at===snapshot.updated_at?stories.stories?.[d.match.id]:null;
+  const facts=item?.facts, prose=item?.status==='ready'?item.narrative:null;
+  const valid=prose&&facts&&prose.fingerprint===facts.fingerprint&&
+    typeof prose.headline==='string'&&typeof prose.explanation==='string'&&
+    Array.isArray(prose.evidence_ids)&&prose.evidence_ids.length>=2&&
+    prose.evidence_ids.every(id=>facts.evidence.some(e=>e.id===id));
+  $('story-label').textContent=valid?'MAÇIN HİKÂYESİ · AI YORUMU':'MAÇIN BULGULARI';
+  $('story-headline').textContent=valid?prose.headline:'Bu maçın AI yorumu henüz hazır değil.';
+  $('story-explanation').textContent=valid?prose.explanation:'Şut verilerinden hesaplanan bulguları ve ayrıntılı analizi aşağıda inceleyebilirsin.';
+  const evidence=facts?.evidence||[
+    {id:'chances',label:'Üretilen fırsatların kalitesi',text:`${d.match.home}: ${dec(sums[0])} xG · ${d.match.away}: ${dec(sums[1])} xG.`},
+    {id:'outcomes',label:'Aynı şutlarla olası sonuçlar',text:`${d.match.home} galibiyeti ${pct(a.win)}, beraberlik ${pct(a.draw)}, ${d.match.away} galibiyeti ${pct(a.loss)}.`}
+  ];
+  const selected=valid?prose.evidence_ids.map(id=>evidence.find(e=>e.id===id)).filter(Boolean):evidence.slice(0,3);
+  $('story-evidence').replaceChildren(...selected.map(e=>{const box=el('article','','evidence');box.append(el('h3',e.label),el('p',e.text));return box;}));
+  $('all-evidence').replaceChildren(...evidence.map(e=>{const box=el('article','','evidence');box.append(el('h3',e.label),el('p',e.text));return box;}));
+  $('story-note').textContent=valid?'AI yorumu, aşağıdaki şut verilerine dayanır. Sayısal kanıtlar doğrudan hesaplanır; analiz tüm oyun performansını ölçmez.':'Şutlara dayalı analiz, tüm oyun performansını ölçmez.';
+  $('insight').textContent=valid?prose.explanation:'Bu dağılım gerçekleşmiş şutlara koşulludur; maç öncesi tahmin veya kesin bir hak edilen skor değildir.';
+}
 function selectLeague() {
   available=snapshot.matches.filter(d=>String(d.league_id||'example')===$('league').value).sort((a,b)=>b.match.date.localeCompare(a.match.date));
   $('match').replaceChildren(...available.map(d=>new Option(`${d.match.date.slice(0,10)} · ${d.match.home} ${d.home_score}–${d.away_score} ${d.match.away}`,d.match.id)));
@@ -28,7 +48,7 @@ function render() {
     ['En olası skor',`${a.scores[0].home} – ${a.scores[0].away}`,`${pct(a.scores[0].probability)} olasılıkla`]
   ].map(([label,value,note])=>{const box=el('div','','metric');box.append(el('span',label),el('strong',value),el('small',note));return box;}));
   $('outcomes').replaceChildren(...[[m.home,a.win,colors[0]],['Beraberlik',a.draw,'#bac9c3'],[m.away,a.loss,colors[1]]].map(([name,p,color])=>{const box=el('div','','outcome'),label=el('div','','label'),bar=el('div','','bar'),fill=el('i','');label.append(el('span',name),el('b',pct(p)));fill.style.width=`${p*100}%`;fill.style.background=color;bar.append(fill);box.append(label,bar);return box;}));
-  $('insight').textContent=`${m.home} ${dec(sums[0])}, ${m.away} ${dec(sums[1])} xG üretti. Aynı şutları bu modelle tekrar değerlendirdiğimizde en olası skor ${a.scores[0].home}–${a.scores[0].away}; ${m.home} galibiyetinin olasılığı ${pct(a.win)}. Bu, gerçekleşmiş şutların alternatif sonuçlarını gösterir.`;
+  renderStory(d,a,sums);
   const table=document.createElement('table'),head=document.createElement('tr');head.append(el('th','Ev ↓ / Dep →'));
   const hn=Math.min(9,a.h.length),an=Math.min(9,a.a.length),max=a.scores[0].probability;
   for(let j=0;j<an;j++)head.append(el('th',String(j)));table.append(head);let shown=0;
@@ -63,6 +83,7 @@ $('league').addEventListener('change',selectLeague);$('match').addEventListener(
 $('share').addEventListener('click',async()=>{try{if(navigator.share)await navigator.share({title:'Goal Illusion',url:location.href});else{await navigator.clipboard.writeText(location.href);$('share').textContent='Bağlantı kopyalandı ✓';}}catch{ $('status').textContent='Paylaşmak için adres çubuğundaki bağlantıyı kopyalayabilirsin.';}});
 try{
  const response=await fetch('data/matches.json');if(!response.ok)throw new Error('Veri dosyası okunamadı');snapshot=await response.json();
+ try {const sr=await fetch('data/stories.json');if(sr.ok)stories=await sr.json();}catch{stories=null;}
  const leagues=[...new Set(snapshot.matches.map(d=>String(d.league_id||'example')))];
  $('league').replaceChildren(...leagues.map(id=>new Option(id==='71'?'Süper Lig · Türkiye':id==='54'?'Bundesliga · Almanya':'Dünya Kupası · örnek maç',id)));
  const requested=snapshot.matches.find(d=>String(d.match.id)===new URL(location.href).searchParams.get('match'));

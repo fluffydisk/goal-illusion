@@ -2,7 +2,7 @@
 
 **Skor her şeyi anlatır mı?** Gerçek bir maçın şutlarını alır, xG değerlerinden olası
 skorları hesaplar ve maç sonucunu bu dağılımla karşılaştırır. Türkçe Streamlit paneli;
-API anahtarı, ücretli AI servisi veya hesap gerektirmez.
+Ziyaretçiler için API anahtarı veya hesap gerekmez. AI yorumlarının üretimi için geliştirici tarafında ücretsiz Groq hesabı gerekir.
 
 ## Çalıştırma
 
@@ -143,3 +143,62 @@ node --test tests/pages_math.test.mjs
 Node testi için `tests/pages_reference.json`, yayımlanan maçların Python referansını
 saklar. Bu dosya güncellendiğinde `scripts/check_pages.py` ile yeniden üretilebilir.
 Pages ayarı **Settings → Pages → Source → GitHub Actions** olmalıdır.
+
+## Maçın hikâyesi — özgün AI yorumları
+
+Maç seçildiğinde en üstte o maça özel bir başlık, kısa açıklama ve bunları destekleyen
+kanıt kartları görünür. Metin sabit cümlelerden seçilmez: Groq üzerinden
+`openai/gpt-oss-120b` modeline maç bulguları gönderilerek üretilir.
+Ücretsiz planın kotası kullanılır; kota dolunca mevcut analiz kullanılabilir kalır.
+GitHub Pages model çalıştırmaz; güncelleme sırasında üretilen metni yayımlar.
+Ziyaretçiler model indirmez, API anahtarı veya hesap gerekmez.
+
+Kanıt katmanı toplam xG, şut başına xG, devrelere göre xG, kendi kalesine goller hariç
+gol–xG farkı, galibiyet olasılıkları ve kazananın **en az gerçekleşen gol farkıyla**
+kazanma olasılığını hesaplar. Son ölçü tek bir tam skorun düşük olasılığından farklıdır;
+beraberlikte yönlü skor farkı ölçüsü verilmez. Sıfır şutta ortalama xG tanımsızdır.
+
+[Groq şemalı çıktı API’sinin](https://console.groq.com/docs/structured-outputs) strict JSON modu kullanılır.
+Modelden sayısız Türkçe metin ve kanıt kimlikleri alınır; sayılar uygulamanın hesabından
+gelir. Geçersiz kanıt bağlantıları, metindeki rakamlar/HTML ve belirli desteklenmeyen
+iddialar reddedilir; bir düzeltme denemesi yapılır. Bunlar dil modelinin her yorumunun
+anlamsal olarak doğru olduğunu garanti etmez. Özellikle küçük modelin Türkçesi ve
+çıkarımları gözden geçirilmelidir. Yorumlar şut kalitesiyle sınırlıdır; tüm oyun kalitesi,
+pres, topa sahip olma veya kesin hak edilen sonuç iddiası değildir.
+
+Maç verisi değişirse SHA-256 parmak izi eski yorumu geçersiz kılar; eski veriye ait
+cümle yeni istatistiklere iliştirilmez. Model erişilemez veya çıktı kontrolleri geçmezse
+AI yorumun hazır olmadığı belirtilir; sayısal analiz ve kanıtlar kullanılabilir kalır.
+Hazır bir şablon AI yorumu gibi sunulmaz. Kaynak xG uyarıları korunur.
+
+GitHub Actions kurulumu: Groq anahtarını depo **Settings → Secrets and variables →
+Actions** bölümüne `GROQ_API_KEY` adıyla ekle. Anahtar kaynak koda veya `web/` içine
+konmaz. Actions yalnızca maçın sayısal bulgularını API’ye gönderir ve hazır metni yayımlar.
+Anahtar yoksa yalnızca kanıtlar hazırlanır. İlk kalite kontrolü için Actions işini
+`preview=true`, `story_limit=3` ile çalıştır; `match-stories` çıktısını incele. Önizleme
+siteyi değiştirmez ve ayrı önbellek kullanır. Yorumlar kontrol edildikten sonra depo
+Actions değişkeni `ENABLE_AI_STORIES=true` ayarlanarak düzenli üretim açılır. Yerel Groq üretiminde anahtarı ortam değişkeni
+olarak sağla; komut `uv run python scripts/generate_stories.py --provider groq`.
+
+Deneysel yerel alternatif (küçük modelin Türkçesi ve yorumları gerçek maç denemelerinde
+beklenen kalitede değildi; otomatik yayında kullanılmaz):
+
+```bash
+ollama serve
+# Başka bir terminalde:
+ollama pull qwen3.5:4b
+uv run python scripts/generate_stories.py
+```
+
+Streamlit ekranında hazır yorum kullanılır. Yeni/eskiden yayımlanmayan maçlar için
+**Yerel modelle maç yorumunu üret** düğmesi vardır. `OLLAMA_BASE_URL` ile farklı yerel
+adres seçilebilir. `--limit 3` yalnızca ilk üç eksik yorumu üretir; tüm maçların
+kanıtları yine yazılır. `--evidence-only` model çağrısı yapmaz.
+
+Actions her veri güncellemesinde en yeni maçlara öncelik vererek en fazla yirmi
+eksik/değişmiş yorumu üretir; geçerli yorumları önbellekte tutar. Sonraki
+çalışmalar kalan maçlarla devam eder; analiz kapsamı daraltılmaz. Elle çalıştırmada
+`story_limit` artırılarak bütün eksik yorumlar tek çalışmada üretilebilir.
+Groq çağrıları arasında kota için beklenir; sınırlama yanıtında bir tekrar denemesi yapılır.
+API erişimi başarısız olsa da kanıtlarla site yayımlanır. Üretilen metinlerin gerçek maçlar
+üzerinde anlamsal kalite kontrolü, API anahtarı eklendikten sonra tamamlanmalıdır.
