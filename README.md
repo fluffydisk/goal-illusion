@@ -148,6 +148,11 @@ paketinden okur. Paket oluşturulurken her maçın veri parmak izi kontrol edili
 Sayfa açıkken veri düzeltilirse analiz isteği eski sürümle üretim başlatmaz;
 arayüz güncel paketi yükleyip bir kez otomatik tekrar dener.
 
+Analiz başlığı doğrudan maç skoru ve toplam xG değerlerini gösterir. AI açıklaması
+kısa, düz Türkçe cümlelerle bulguyu yorumlar; manşet dili ve mecazlar kabul edilmez.
+Bağımsız inceleme hem istatistiksel doğruluğu hem okunabilirliği kontrol eder.
+Yazım kuralları değiştiğinde sunucudaki eski yorumlar ve taslaklar tekrar kullanılmaz.
+
 Node testi için `tests/pages_reference.json`, yayımlanan maçların Python referansını
 saklar. Bu dosya güncellendiğinde `scripts/check_pages.py` ile yeniden üretilebilir.
 Pages ayarı **Settings → Pages → Source → GitHub Actions** olmalıdır.

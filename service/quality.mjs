@@ -7,9 +7,11 @@ export function validateProse(value, facts, modelFacts) {
     else if (v && typeof v === 'object') Object.values(v).forEach(collect);
   }
   collect(modelFacts);
+  collect(facts);
   for (const [key,min,max] of [['headline',15,180],['explanation',30,500]]) {
     const text=value[key];
     if (typeof text !== 'string' || text.trim().length<min || text.trim().length>max) throw new Error('Yorum beklenen uzunlukta değil.');
+    if (/fırsat terazisi|dengenin içinden|ayrı bir hikâye|tek yönlülük|tabela[^.]*gizli|ağırlık verdiği sonuç/u.test(text.toLocaleLowerCase('tr-TR'))) throw new Error('Yorum soyut manşet dili içeriyor; bulguyu doğrudan açıkla.');
     let stripped=text;
     for (const team of [facts.home.name,facts.away.name]) stripped=stripped.split(team).join('');
     if (/[<>\n#*\[\]`]|https?:\/\//u.test(stripped)) throw new Error('Yorum biçimlendirme içeriyor.');

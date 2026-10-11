@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import worker,{AnalysisQueue,publicJob} from './worker.mjs';
 import {validateProse} from './quality.mjs';
 import {progressText} from '../web/ai-client.mjs';
+import contract from './contract.json' with {type:'json'};
 const archive=JSON.parse(readFileSync(new URL('../web/data/stories.json',import.meta.url)));
 const original=Object.values(archive.stories)[0];
 const item={...original,status:'pending',narrative:null};
@@ -13,6 +14,26 @@ test('mismatched client version is rejected before quota or queue changes',async
   const response=await queue.fetch(new Request('https://internal/analysis/1?fingerprint=old',{method:'POST'}));
   assert.equal(response.status,409);assert.equal((await response.json()).status,'data_changed');
   assert.equal(await storage.get('quota'),undefined);assert.equal(await storage.get('queue'),undefined);
+});
+test('old writing policy cannot reuse static prose or generated cache',async()=>{
+  const {queue,storage,request}=setup();
+  const old={...valid,prompt_version:contract.prompt_version-1};
+  queue.facts=async()=>({...item,status:'ready',narrative:old});
+  await storage.put(`job:1:${item.facts.fingerprint}`,{status:'ready',narrative:old});
+  assert.equal((await (await queue.fetch(request('GET'))).json()).status,'missing');
+  assert.equal(await storage.get('quota'),undefined);
+});
+test('queued drafts from an old writing policy stop without provider calls',async()=>{
+  const {queue,storage}=setup();
+  await storage.put('queue',['legacy']);
+  await storage.put('legacy',{status:'queued',prompt_version:contract.prompt_version-1});
+  queue.complete=()=>assert.fail('Obsolete draft must not use the provider');
+  await queue.alarm();
+  assert.equal((await storage.get('legacy')).status,'failed');
+  assert.deepEqual(await storage.get('queue'),[]);
+});
+test('headline metaphors fail the style gate before independent review',()=>{
+  assert.throws(()=>validateProse({headline:'Kasımpaşa galibiyeti dengenin içinden geliyor.',explanation:valid.explanation,evidence_ids:valid.evidence_ids},item.facts,item.model_facts),/manşet/);
 });
 class Storage {
   values=new Map(); alarm=null;

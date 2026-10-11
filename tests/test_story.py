@@ -15,6 +15,20 @@ from goal_illusion.story import build_evidence, fingerprint
 from scripts.generate_stories import generate
 
 
+def test_abstract_headline_style_is_rejected(facts, prose):
+    with pytest.raises(DataError, match="manşet"):
+        validate_narrative(
+            {**prose, "headline": "İngiltere galibiyeti dengenin içinden geliyor."}, facts
+        )
+
+
+def test_original_statistic_rounding_is_allowed(facts, prose):
+    corrected = {**facts, "home": {**facts["home"], "xg": 1.5354006653651595}}
+    assert validate_narrative(
+        {**prose, "headline": "İngiltere için toplam xG 1,54."}, corrected
+    )["headline"].endswith("1,54.")
+
+
 @pytest.fixture
 def facts():
     return build_evidence(load_example())

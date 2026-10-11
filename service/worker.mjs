@@ -47,8 +47,8 @@ export class AnalysisQueue {
       const expected=new URL(request.url).searchParams.get('fingerprint');
       if(expected && expected!==item.facts.fingerprint)
         return json({status:'data_changed',fingerprint:item.facts.fingerprint},409);
-      if (item.status==='ready' && item.narrative?.fingerprint===item.facts.fingerprint) return json({status:'ready',narrative:item.narrative,fingerprint:item.facts.fingerprint});
-      const key=`job:${id}:${item.facts.fingerprint}`;
+      if (item.status==='ready' && item.narrative?.fingerprint===item.facts.fingerprint && item.narrative.prompt_version===contract.prompt_version) return json({status:'ready',narrative:item.narrative,fingerprint:item.facts.fingerprint});
+      const key=`job:v${contract.prompt_version}:${id}:${item.facts.fingerprint}`;
       return await this.ctx.blockConcurrencyWhile(async()=>{
         let job=await this.ctx.storage.get(key);
         const waiting=await this.ctx.storage.get('queue')||[];
@@ -69,7 +69,7 @@ export class AnalysisQueue {
         const queue=await this.ctx.storage.get('queue')||[];
         if (queue.length>=10) return json({status:'rate_limited',error:'Analiz sırası dolu. Birkaç dakika sonra yeniden dene.',retry_at:now+60000},429);
         const retainedDraft=job?.status==='rate_limited'&&job.draft?validateProse(job.draft,item.facts,item.model_facts):undefined;
-        job={draft:retainedDraft,status:'queued',fingerprint:item.facts.fingerprint,facts:item.facts,model_facts:item.model_facts,started_at:now,updated_at:now,attempt:0};
+        job={draft:retainedDraft,prompt_version:contract.prompt_version,status:'queued',fingerprint:item.facts.fingerprint,facts:item.facts,model_facts:item.model_facts,started_at:now,updated_at:now,attempt:0};
         quota.count++;recent.push(now);queue.push(key);
         await this.ctx.storage.put({[key]:job,quota,[clientKey]:recent,queue});
         if (await this.ctx.storage.getAlarm()===null) await this.ctx.storage.setAlarm(now+100);
@@ -95,6 +95,7 @@ export class AnalysisQueue {
     const job=await this.ctx.storage.get(key);
     try {
       if (!job || ['ready','failed','rate_limited'].includes(job.status)) return;
+      if(job.prompt_version!==contract.prompt_version){job.status='failed';job.error='Yazım kuralları güncellendi. Yeni kurallarla yeniden analiz isteyebilirsin.';return;}
       if(job.status==='waiting_provider'){if(job.retry_at>Date.now()){await this.ctx.storage.setAlarm(job.retry_at);return;}job.status=job.resume_status;delete job.resume_status;job.updated_at=Date.now();await this.ctx.storage.put(key,job);}
       const cooldown=await this.ctx.storage.get('provider_cooldown')||0;
       if(cooldown>Date.now()){const e=new Error('Kota');e.quota=true;e.retryMs=cooldown-Date.now();throw e;}

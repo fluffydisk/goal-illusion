@@ -1,6 +1,7 @@
 import {analyze} from './math.mjs';
 import {ACTIVE, progressText, analysisRequest} from './ai-client.mjs?v=sync1';
 import {loadAnalysisBundle, consistentAnalysis} from './analysis-data.mjs';
+import {statisticalTitle} from './story-presentation.mjs';
 const $ = id => document.getElementById(id);
 const pct = n => new Intl.NumberFormat('tr-TR',{style:'percent',maximumFractionDigits:1}).format(n);
 const dec = n => n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -79,8 +80,8 @@ function renderStory(d, a, sums) {
     typeof prose.headline==='string'&&typeof prose.explanation==='string'&&
     Array.isArray(prose.evidence_ids)&&prose.evidence_ids.length>=2&&
     prose.evidence_ids.every(id=>facts.evidence.some(e=>e.id===id));
-  $('story-label').textContent=valid?'MAÇIN HİKÂYESİ · AI YORUMU':'MAÇIN BULGULARI';
-  $('story-headline').textContent=valid?prose.headline:'Bu maçın AI analizini oluştur.';
+  $('story-label').textContent=valid?'MAÇIN ANALİZİ · AI YORUMU':'MAÇIN BULGULARI';
+  $('story-headline').textContent=statisticalTitle(d);
   $('story-explanation').textContent=valid?prose.explanation:'Şut verileri hazır. Maça özgü AI yorumunu aşağıdaki butonla üretebilirsin.';
   jobWidget(d);
   const evidence=facts?.evidence||[
