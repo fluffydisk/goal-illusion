@@ -94,7 +94,7 @@ export class AnalysisQueue {
       signal:AbortSignal.timeout(120000)
     });
     if (response.status===429) {const error=new Error('AI sağlayıcısının ücretsiz kotası doldu.');error.quota=true;const delay=Number(response.headers.get('retry-after'));error.retryMs=Number.isFinite(delay)&&delay>0?Math.max(20000,Math.min(86400000,delay*1000)):60000;throw error;}
-    if (!response.ok) throw new Error('AI sağlayıcısına ulaşılamadı.');
+    if (!response.ok) throw new Error(`AI sağlayıcısına ulaşılamadı (HTTP ${response.status}).`);
     const choice=(await response.json()).choices?.[0];
     if (choice?.finish_reason!=='stop') throw new Error('Model yanıtı tamamlanamadı.');
     return JSON.parse(choice.message.content);
@@ -126,6 +126,7 @@ export class AnalysisQueue {
       job.narrative={...job.draft,fingerprint:job.fingerprint,story_version:contract.story_version,prompt_version:contract.prompt_version,provider:'groq',model:contract.model,generated_at:new Date().toISOString()};
       job.status='ready'; delete job.draft; delete job.feedback;
     } catch (error) {
+      job.last_failure=String(error.message).slice(0,200);
       if(error.quota && error.retryMs<=120000 && (job.quota_retries||0)<2){
         job.quota_retries=(job.quota_retries||0)+1;job.resume_status=job.status;job.status='waiting_provider';job.updated_at=Date.now();job.retry_at=Date.now()+Math.max(20000,error.retryMs);
         await this.ctx.storage.put('provider_cooldown',job.retry_at);await this.ctx.storage.put(key,job);await this.ctx.storage.setAlarm(job.retry_at);return;
