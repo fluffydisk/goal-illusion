@@ -8,6 +8,7 @@ from goal_illusion.narrative import (
     PROMPT_VERSION,
     generate_narrative,
     narrative_matches,
+    prompt_facts,
     validate_narrative,
 )
 from goal_illusion.story import build_evidence, fingerprint
@@ -27,6 +28,17 @@ def prose():
         "Skorun farkını değerlendirirken şutların dağılımı da dikkate alınmalı.",
         "evidence_ids": ["chances", "outcomes", "margin"],
     }
+
+
+def test_prompt_distinguishes_total_and_per_shot_quality(facts):
+    facts = {
+        **facts,
+        "home": {**facts["home"], "xg": 1.3, "xg_per_shot": 0.065},
+        "away": {**facts["away"], "xg": 1.16, "xg_per_shot": 0.072},
+    }
+    comparisons = prompt_facts(facts)["doğrulanmış_ilişkiler"]
+    assert comparisons["toplam_fırsat_kalitesi"]["yüksek_olan"] == facts["home"]["name"]
+    assert comparisons["tekil_şut_kalitesi"]["yüksek_olan"] == facts["away"]["name"]
 
 
 def test_evidence_matches_independent_enumeration(facts):
