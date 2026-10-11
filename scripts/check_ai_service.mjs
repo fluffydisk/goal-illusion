@@ -15,7 +15,7 @@ const storage={
 const queue=new AnalysisQueue({storage,blockConcurrencyWhile:fn=>fn()},{GROQ_API_KEY:process.env.GROQ_API_KEY});
 await storage.put('queue',['integration-check']);
 await storage.put('integration-check',{status:'queued',fingerprint:item.facts.fingerprint,facts:item.facts,model_facts:item.model_facts,started_at:Date.now(),updated_at:Date.now(),attempt:0});
-for(let i=0;i<5;i++){
+for(let i=0;i<8;i++){
   if(alarmAt>Date.now())await new Promise(resolve=>setTimeout(resolve,alarmAt-Date.now()));
   await queue.alarm();
   const job=await storage.get('integration-check');console.log(`Stage: ${job.status}`);

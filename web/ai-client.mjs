@@ -1,4 +1,4 @@
-export const ACTIVE = new Set(['queued','generating','reviewing']);
+export const ACTIVE = new Set(['queued','generating','reviewing','waiting_provider']);
 
 export function progressText(job, now=Date.now()) {
   const elapsed=Math.max(0,Math.floor((now-job.started_at)/1000));

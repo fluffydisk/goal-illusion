@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {AnalysisQueue,publicJob} from './worker.mjs';
+import worker,{AnalysisQueue,publicJob} from './worker.mjs';
 import {validateProse} from './quality.mjs';
 import {progressText} from '../web/ai-client.mjs';
 const archive=JSON.parse(readFileSync(new URL('../web/data/stories.json',import.meta.url)));
@@ -19,6 +19,7 @@ function setup() {
   const storage=new Storage();let serial=Promise.resolve();
   const ctx={storage,blockConcurrencyWhile(fn){const next=serial.then(fn);serial=next.catch(()=>{});return next;}};
   const queue=new AnalysisQueue(ctx,{DAILY_GENERATION_LIMIT:80,GROQ_API_KEY:"test-placeholder"});queue.facts=async()=>item;
+  const actualAlarm=queue.alarm.bind(queue);queue.alarm=async()=>{const keys=await storage.get('queue')||[];const job=await storage.get(keys[0]);if(job?.status==='waiting_provider'){job.retry_at=Date.now()-1;await storage.put('provider_cooldown',0);await storage.put(keys[0],job);}await actualAlarm();};
   const request=(method='POST')=>new Request('https://internal/analysis/1',{method,headers:{'X-Client':'test'}});
   return {storage,queue,request};
 }
@@ -39,7 +40,7 @@ test('simultaneous visitors enqueue one job and GET never generates',async()=>{
 test('generation requires an independent approval; result is shared and reusable',async()=>{
   const {queue,storage,request}=setup();await queue.fetch(request());let calls=0;
   queue.complete=async()=>{calls++;return calls===1?{headline:valid.headline,explanation:valid.explanation,evidence_ids:valid.evidence_ids}:{approved:true,reason:'Veriyle uyumlu.'};};
-  await queue.alarm();assert.equal((await (await queue.fetch(request('GET'))).json()).status,'reviewing');
+  await queue.alarm();assert.equal((await (await queue.fetch(request('GET'))).json()).status,'waiting_provider');
   await queue.alarm();const ready=await (await queue.fetch(request('GET'))).json();
   assert.equal(ready.status,'ready');assert.equal(ready.narrative.provider,'groq');assert.equal(ready.narrative.fingerprint,item.facts.fingerprint);
   await queue.fetch(request());assert.equal(calls,2);assert.equal((await storage.get('queue')).length,0);
@@ -82,4 +83,21 @@ test('provider cooldown prevents queued jobs from consuming more provider quota'
 test('unconfigured credentials cannot consume quota or start jobs',async()=>{
   const {queue,storage,request}=setup();delete queue.env.GROQ_API_KEY;
   assert.equal((await queue.fetch(request())).status,503);assert.equal(await storage.get('queue'),undefined);
+});
+test('temporary provider limits preserve the draft and resume its review',async()=>{
+  const {queue,storage,request}=setup();await queue.fetch(request());let generated=0,reviewed=0;
+  queue.complete=async(_,__,name)=>{
+    if(name==='match_story'){generated++;return {headline:valid.headline,explanation:valid.explanation,evidence_ids:valid.evidence_ids};}
+    reviewed++;if(reviewed===1){const e=new Error('Temporary quota');e.quota=true;e.retryMs=30000;throw e;}return {approved:true,reason:'Doğru.'};
+  };
+  await queue.alarm();await queue.alarm();
+  assert.equal((await (await queue.fetch(request('GET'))).json()).status,'waiting_provider');
+  await queue.alarm();assert.equal((await (await queue.fetch(request('GET'))).json()).status,'ready');
+  assert.equal(generated,1);assert.equal(reviewed,2);assert.equal((await storage.get('queue')).length,0);
+});
+test('health reveals only configuration state and rejects other origins',async()=>{
+  const env={SITE_ORIGIN:'https://fluffydisk.github.io',GROQ_API_KEY:'test-secret'};
+  const response=await worker.fetch(new Request('https://worker/health',{headers:{Origin:env.SITE_ORIGIN}}),env);
+  const data=await response.json();assert.equal(data.configured,true);assert.ok(!JSON.stringify(data).includes('test-secret'));
+  assert.equal((await worker.fetch(new Request('https://worker/health',{headers:{Origin:'https://other.example'}}),env)).status,403);
 });

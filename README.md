@@ -179,7 +179,7 @@ altı saatte bir yalnızca maç verisini ve kanıtlarını yeniler, mevcut yorum
 Yeni/değişmiş maçlar ziyaretçi isteğini bekler. Aynı maç için eşzamanlı istekler tek
 işte birleşir; hazır sonuç veri parmak iziyle ortak ve kalıcı olarak saklanır.
 
-Widget sırada bekleme, yorum üretimi ve ayrı doğruluk kontrolünü gösterir. Geçen süre
+Widget sırada bekleme, yorum üretimi, sağlayıcı kotası için bekleme ve ayrı doğruluk kontrolünü gösterir. Geçen süre
 ve tahmini bekleme aralığı sunulur; sağlayıcının gerçek ilerlemesi bilinmediği için
 kesin yüzde veya kesin bitiş zamanı gösterilmez. Yenileme/başka maça geçme sunucudaki
 üretimi iptal etmez. API kotasında ya da kalite sorunununda yeniden deneme sunulur.

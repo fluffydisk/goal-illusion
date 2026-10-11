@@ -3,6 +3,7 @@
   "main": "worker.mjs",
   "compatibility_date": "2026-10-11",
   "workers_dev": true,
+  "keep_vars": true,
   "vars": {
     "SITE_ORIGIN": "https://fluffydisk.github.io",
     "STORIES_URL": "https://fluffydisk.github.io/goal-illusion/data/stories.json",

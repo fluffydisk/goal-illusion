@@ -26,7 +26,7 @@ function jobWidget(d) {
   }
   clearInterval(clockTimer);tick();
   if (job&&ACTIVE.has(job.status)) clockTimer=setInterval(tick,1000);
-  for (const step of document.querySelectorAll('.ai-steps li')) step.classList.toggle('current',step.dataset.stage===job?.status);
+  for (const step of document.querySelectorAll('.ai-steps li')) step.classList.toggle('current',step.dataset.stage===(job?.resume_status||job?.status));
 }
 async function refreshJob(d,method='GET') {
   if (!aiEndpoint || hasStory(d)) return;

@@ -2,13 +2,13 @@ import contract from './contract.json' with {type:'json'};
 import {validateProse} from './quality.mjs';
 
 const json=(data,status=200)=>Response.json(data,{status});
-const phases={queued:'Sırada bekliyor',generating:'Maça özgü yorum yazılıyor',reviewing:'Veriler ve yorum karşılaştırılıyor',ready:'Analiz hazır',failed:'Analiz tamamlanamadı',rate_limited:'Ücretsiz kota doldu'};
+const phases={queued:'Sırada bekliyor',generating:'Maça özgü yorum yazılıyor',reviewing:'Veriler ve yorum karşılaştırılıyor',waiting_provider:'AI sağlayıcısının sırası bekleniyor',ready:'Analiz hazır',failed:'Analiz tamamlanamadı',rate_limited:'Ücretsiz kota doldu'};
 export function publicJob(job) {
   if (!job) return {status:'missing'};
-  const {status,started_at,updated_at,narrative,fingerprint,error,retry_at,attempt}=job;
-  return {status,phase:phases[status],started_at,updated_at,narrative,fingerprint,error,retry_at,attempt,
+  const {status,started_at,updated_at,narrative,fingerprint,error,retry_at,attempt,resume_status}=job;
+  return {status,phase:phases[status],started_at,updated_at,narrative,fingerprint,error,retry_at,attempt,resume_status,
     // No fabricated percentage/countdown: estimates stay an explicit range.
-    estimated_seconds: status==='queued'?[30,180]:status==='reviewing'?[10,60]:[20,90]};
+    estimated_seconds: status==='waiting_provider'?[Math.max(0,Math.ceil((retry_at-updated_at)/1000)),Math.max(0,Math.ceil((retry_at-updated_at)/1000))+60]:status==='queued'?[30,180]:status==='reviewing'?[10,60]:[20,90]};
 }
 export default {
   async fetch(request,env) {
@@ -16,6 +16,7 @@ export default {
     if (origin!==env.SITE_ORIGIN) return json({error:'Bu istek kaynağına izin verilmiyor.'},403);
     const cors={'Access-Control-Allow-Origin':env.SITE_ORIGIN,'Vary':'Origin','Cache-Control':'no-store'};
     if (request.method==='OPTIONS') return new Response(null,{status:204,headers:{...cors,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type'}});
+    if(request.method==='GET'&&new URL(request.url).pathname==='/health')return new Response(JSON.stringify({configured:Boolean(env.GROQ_API_KEY),model:contract.model}),{headers:{...cors,'Content-Type':'application/json'}});
     const url=new URL(request.url), match=url.pathname.match(/^\/analysis\/(\d{1,12})$/);
     if (!match || !['GET','POST'].includes(request.method)) return json({error:'Bulunamadı.'},404);
     // Client cannot provide prompts, arbitrary matches, model options or credentials.
@@ -47,7 +48,7 @@ export class AnalysisQueue {
       return await this.ctx.blockConcurrencyWhile(async()=>{
         let job=await this.ctx.storage.get(key);
         if (request.method==='GET') return json(publicJob(job));
-        if (job && ['queued','generating','reviewing','ready'].includes(job.status)) return json(publicJob(job),job.status==='ready'?200:202);
+        if (job && ['queued','generating','reviewing','waiting_provider','ready'].includes(job.status)) return json(publicJob(job),job.status==='ready'?200:202);
         if(!this.env.GROQ_API_KEY)return json({error:'AI servisinin sunucu anahtarı henüz bağlanmadı.'},503);
         if (job?.retry_at>Date.now()) return json(publicJob(job),429);
         const cooldown=await this.ctx.storage.get('provider_cooldown')||0;
@@ -87,16 +88,18 @@ export class AnalysisQueue {
     const job=await this.ctx.storage.get(key);
     try {
       if (!job || ['ready','failed','rate_limited'].includes(job.status)) return;
-      if((await this.ctx.storage.get('provider_cooldown')||0)>Date.now()){const e=new Error('Kota');e.quota=true;throw e;}
+      if(job.status==='waiting_provider'){if(job.retry_at>Date.now()){await this.ctx.storage.setAlarm(job.retry_at);return;}job.status=job.resume_status;delete job.resume_status;job.updated_at=Date.now();await this.ctx.storage.put(key,job);}
+      const cooldown=await this.ctx.storage.get('provider_cooldown')||0;
+      if(cooldown>Date.now()){const e=new Error('Kota');e.quota=true;e.retryMs=cooldown-Date.now();throw e;}
       if (job.status==='queued' || job.status==='generating') {
         job.status='generating';job.updated_at=Date.now();await this.ctx.storage.put(key,job);
         const messages=[{role:'system',content:contract.system},{role:'user',content:JSON.stringify(job.model_facts)}];
         if (job.feedback) messages.push({role:'user',content:`Önceki denemenin hatasını düzelt: ${job.feedback}`});
         const draft=await this.complete(messages,contract.schema,'match_story');
-        job.draft=validateProse(draft,job.facts,job.model_facts);job.status='reviewing';job.updated_at=Date.now();
+        job.draft=validateProse(draft,job.facts,job.model_facts);job.status='waiting_provider';job.resume_status='reviewing';job.updated_at=Date.now();job.retry_at=Date.now()+60000;
         await this.ctx.storage.put(key,job);
         // Separate alarm provides durable progress and avoids background-response timeouts.
-        await this.ctx.storage.setAlarm(Date.now()+20000); return;
+        await this.ctx.storage.setAlarm(job.retry_at); return;
       }
       const review=await this.complete([{role:'system',content:contract.review_system},{role:'user',content:JSON.stringify({facts:job.model_facts,prose:job.draft})}],{
         type:'object',properties:{approved:{type:'boolean'},reason:{type:'string'}},required:['approved','reason'],additionalProperties:false
@@ -105,6 +108,10 @@ export class AnalysisQueue {
       job.narrative={...job.draft,fingerprint:job.fingerprint,story_version:contract.story_version,prompt_version:contract.prompt_version,provider:'groq',model:contract.model,generated_at:new Date().toISOString()};
       job.status='ready'; delete job.draft; delete job.feedback;
     } catch (error) {
+      if(error.quota && error.retryMs<=120000 && (job.quota_retries||0)<2){
+        job.quota_retries=(job.quota_retries||0)+1;job.resume_status=job.status;job.status='waiting_provider';job.updated_at=Date.now();job.retry_at=Date.now()+Math.max(20000,error.retryMs);
+        await this.ctx.storage.put('provider_cooldown',job.retry_at);await this.ctx.storage.put(key,job);await this.ctx.storage.setAlarm(job.retry_at);return;
+      }
       if (error.quota) {job.status='rate_limited';job.error='Ücretsiz AI kotası doldu. Daha sonra tekrar deneyebilirsin.';job.retry_at=Date.now()+(error.retryMs||60000);await this.ctx.storage.put('provider_cooldown',job.retry_at);}
       else if (job.attempt<1) {
         job.attempt++;job.feedback=String(error.message).slice(0,200);job.status='generating';job.updated_at=Date.now();
