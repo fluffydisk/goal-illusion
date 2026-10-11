@@ -64,7 +64,8 @@ export class AnalysisQueue {
         if (recent.length>=3) return json({status:'rate_limited',error:'Kısa sürede çok fazla analiz istendi. Birkaç dakika sonra yeniden dene.',retry_at:recent[0]+600000},429);
         const queue=await this.ctx.storage.get('queue')||[];
         if (queue.length>=10) return json({status:'rate_limited',error:'Analiz sırası dolu. Birkaç dakika sonra yeniden dene.',retry_at:now+60000},429);
-        job={status:'queued',fingerprint:item.facts.fingerprint,facts:item.facts,model_facts:item.model_facts,started_at:now,updated_at:now,attempt:0};
+        const retainedDraft=job?.status==='rate_limited'&&job.draft?validateProse(job.draft,item.facts,item.model_facts):undefined;
+        job={draft:retainedDraft,status:'queued',fingerprint:item.facts.fingerprint,facts:item.facts,model_facts:item.model_facts,started_at:now,updated_at:now,attempt:0};
         quota.count++;recent.push(now);queue.push(key);
         await this.ctx.storage.put({[key]:job,quota,[clientKey]:recent,queue});
         if (await this.ctx.storage.getAlarm()===null) await this.ctx.storage.setAlarm(now+100);
@@ -93,6 +94,7 @@ export class AnalysisQueue {
       if(job.status==='waiting_provider'){if(job.retry_at>Date.now()){await this.ctx.storage.setAlarm(job.retry_at);return;}job.status=job.resume_status;delete job.resume_status;job.updated_at=Date.now();await this.ctx.storage.put(key,job);}
       const cooldown=await this.ctx.storage.get('provider_cooldown')||0;
       if(cooldown>Date.now()){const e=new Error('Kota');e.quota=true;e.retryMs=cooldown-Date.now();throw e;}
+      if(job.status==='queued'&&job.draft){job.status='reviewing';job.updated_at=Date.now();await this.ctx.storage.put(key,job);}
       if (job.status==='queued' || job.status==='generating') {
         job.status='generating';job.updated_at=Date.now();await this.ctx.storage.put(key,job);
         const messages=[{role:'system',content:contract.system},{role:'user',content:JSON.stringify(job.model_facts)}];

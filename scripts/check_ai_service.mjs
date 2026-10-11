@@ -19,7 +19,7 @@ for(let i=0;i<8;i++){
   if(alarmAt>Date.now())await new Promise(resolve=>setTimeout(resolve,alarmAt-Date.now()));
   await queue.alarm();
   const job=await storage.get('integration-check');console.log(`Stage: ${job.status}`);
-  if(['failed','rate_limited'].includes(job.status))throw new Error(job.error);
+  if(['failed','rate_limited'].includes(job.status)){console.log(`Provider retry time: ${job.retry_at?new Date(job.retry_at).toISOString():'unknown'}`);throw new Error(job.error);}
   if(job.status==='ready'){
     writeFileSync('/tmp/ai-quality-check.json',JSON.stringify(publicJob(job),null,2));
     console.log(`Approved: ${job.narrative.headline}`);process.exit(0);

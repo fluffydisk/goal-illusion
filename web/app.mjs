@@ -19,6 +19,7 @@ function jobWidget(d) {
   $('generate-ai').disabled=!aiEndpoint;
   $('generate-ai').textContent=job&&['failed','rate_limited'].includes(job.status)?'Yeniden dene':'AI analizi üret';
   $('ai-message').textContent=!aiEndpoint?'İstek üzerine analiz servisi henüz bağlanmadı.':job?.error||'Güçlü model maça özgü yorum yazar; ayrı bir model çağrısı doğruluğunu kontrol eder.';
+  if(job?.retry_at>Date.now()&&!ACTIVE.has(job.status))$('ai-message').textContent+=' En erken yeniden deneme: '+new Date(job.retry_at).toLocaleString('tr-TR')+'.';
   $('ai-phase').textContent=job?.phase||'';
   function tick() {
     if (!job||!ACTIVE.has(job.status)) return;

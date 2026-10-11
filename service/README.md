@@ -40,7 +40,7 @@ ve kesin bitiş zamanı sağlamaz.
 Günde 80 üretim başlangıcı, istemci/IP hash'i başına 10 dakikada 3 yeni istek ve en
 fazla 10 sıradaki iş vardır. Ham IP saklanmaz. CORS tek siteye izin verir; CORS kimlik
 doğrulama değildir, üretim sınırları ve sağlayıcı kotası ücretsiz kullanımı sınırlar.
-Kısa süreli kota sınırında taslak korunur, widget bekleme aşamasını gösterir ve kontrol en fazla iki kez otomatik sürdürülür. Uzun süreli kota sınırında yeniden deneme zamanı verilir. Sonuçlar yalnızca maç/veri parmak izi
+Kısa süreli kota sınırında taslak korunur, widget bekleme aşamasını gösterir ve kontrol en fazla iki kez otomatik sürdürülür. Uzun süreli kota sınırında yeniden deneme zamanı verilir; sonraki manuel denemede mevcut taslak kullanılarak doğruluk kontrolü sürdürülür. Sonuçlar yalnızca maç/veri parmak izi
 bazında yeniden kullanılır. Sağlayıcı anahtarı veya yanıt hata gövdesi loglanmaz.
 
 ## Doğrulama

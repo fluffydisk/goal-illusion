@@ -106,3 +106,15 @@ test('queued visitors see their actual position and a longer estimate',async()=>
   const response=await queue.fetch(new Request('https://internal/analysis/2',{method:'POST',headers:{'X-Client':'another'}}));
   const job=await response.json();assert.equal(job.queue_position,2);assert.equal(job.estimated_seconds[0],120);assert.match(job.phase,/2\./);
 });
+test('a manual retry after longer quota expiry reuses the retained draft',async()=>{
+  const {queue,storage,request}=setup();await queue.fetch(request());let generated=0,reviewed=0;
+  queue.complete=async(_,__,name)=>{
+    if(name==='match_story'){generated++;return {headline:valid.headline,explanation:valid.explanation,evidence_ids:valid.evidence_ids};}
+    if(++reviewed===1){const e=new Error('Long quota');e.quota=true;e.retryMs=3600000;throw e;}return {approved:true,reason:'Doğru.'};
+  };
+  await queue.alarm();await queue.alarm();const key=[...storage.values.keys()].find(k=>k.startsWith('job:'));
+  const job=await storage.get(key);assert.equal(job.status,'rate_limited');assert.ok(job.draft);
+  job.retry_at=0;await storage.put(key,job);await storage.put('provider_cooldown',0);
+  await queue.fetch(request());await queue.alarm();
+  assert.equal((await (await queue.fetch(request('GET'))).json()).status,'ready');assert.equal(generated,1);
+});
