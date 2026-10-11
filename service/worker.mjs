@@ -3,12 +3,12 @@ import {validateProse} from './quality.mjs';
 
 const json=(data,status=200)=>Response.json(data,{status});
 const phases={queued:'Sırada bekliyor',generating:'Maça özgü yorum yazılıyor',reviewing:'Veriler ve yorum karşılaştırılıyor',waiting_provider:'AI sağlayıcısının sırası bekleniyor',ready:'Analiz hazır',failed:'Analiz tamamlanamadı',rate_limited:'Ücretsiz kota doldu'};
-export function publicJob(job) {
+export function publicJob(job, position) {
   if (!job) return {status:'missing'};
   const {status,started_at,updated_at,narrative,fingerprint,error,retry_at,attempt,resume_status}=job;
-  return {status,phase:phases[status],started_at,updated_at,narrative,fingerprint,error,retry_at,attempt,resume_status,
+  return {status,phase:status==='queued'&&position?`${position}. sırada bekliyor`:phases[status],queue_position:position,eta_reference_at:status==='queued'&&position?Date.now():updated_at,started_at,updated_at,narrative,fingerprint,error,retry_at,attempt,resume_status,
     // No fabricated percentage/countdown: estimates stay an explicit range.
-    estimated_seconds: status==='waiting_provider'?[Math.max(0,Math.ceil((retry_at-updated_at)/1000)),Math.max(0,Math.ceil((retry_at-updated_at)/1000))+60]:status==='queued'?[30,180]:status==='reviewing'?[10,60]:[20,90]};
+    estimated_seconds: status==='waiting_provider'?[Math.max(0,Math.ceil((retry_at-updated_at)/1000)),Math.max(0,Math.ceil((retry_at-updated_at)/1000))+60]:status==='queued'?[30+Math.max(0,(position||1)-1)*90,180+Math.max(0,(position||1)-1)*180]:status==='reviewing'?[10,60]:[20,90]};
 }
 export default {
   async fetch(request,env) {
@@ -47,8 +47,10 @@ export class AnalysisQueue {
       const key=`job:${id}:${item.facts.fingerprint}`;
       return await this.ctx.blockConcurrencyWhile(async()=>{
         let job=await this.ctx.storage.get(key);
-        if (request.method==='GET') return json(publicJob(job));
-        if (job && ['queued','generating','reviewing','waiting_provider','ready'].includes(job.status)) return json(publicJob(job),job.status==='ready'?200:202);
+        const waiting=await this.ctx.storage.get('queue')||[];
+        const position=job?.status==='queued'?waiting.indexOf(key)+1:undefined;
+        if (request.method==='GET') return json(publicJob(job,position));
+        if (job && ['queued','generating','reviewing','waiting_provider','ready'].includes(job.status)) return json(publicJob(job,position),job.status==='ready'?200:202);
         if(!this.env.GROQ_API_KEY)return json({error:'AI servisinin sunucu anahtarı henüz bağlanmadı.'},503);
         if (job?.retry_at>Date.now()) return json(publicJob(job),429);
         const cooldown=await this.ctx.storage.get('provider_cooldown')||0;
@@ -66,7 +68,7 @@ export class AnalysisQueue {
         quota.count++;recent.push(now);queue.push(key);
         await this.ctx.storage.put({[key]:job,quota,[clientKey]:recent,queue});
         if (await this.ctx.storage.getAlarm()===null) await this.ctx.storage.setAlarm(now+100);
-        return json(publicJob(job),202);
+        return json(publicJob(job,queue.length),202);
       });
     } catch {return json({error:'Analiz servisine ulaşılamadı. Tekrar deneyebilirsin.'},503);}
   }

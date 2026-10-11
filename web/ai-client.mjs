@@ -3,7 +3,7 @@ export const ACTIVE = new Set(['queued','generating','reviewing','waiting_provid
 export function progressText(job, now=Date.now()) {
   const elapsed=Math.max(0,Math.floor((now-job.started_at)/1000));
   const [low,high]=job.estimated_seconds||[20,90];
-  const stageElapsed=Math.max(0,Math.floor((now-(job.updated_at||job.started_at))/1000));
+  const stageElapsed=Math.max(0,Math.floor((now-(job.eta_reference_at||job.updated_at||job.started_at))/1000));
   return {elapsed:`Geçen süre: ${elapsed} sn`,remaining:stageElapsed>high
     ? 'Üretim beklenenden uzun sürüyor. Kalite kontrolü korunuyor.'
     : `Bu aşama için tahmini bekleme: ${Math.max(0,low-stageElapsed)}–${Math.max(0,high-stageElapsed)} sn. Süre yoğunluğa göre değişebilir.`};

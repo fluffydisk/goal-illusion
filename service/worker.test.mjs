@@ -101,3 +101,8 @@ test('health reveals only configuration state and rejects other origins',async()
   const data=await response.json();assert.equal(data.configured,true);assert.ok(!JSON.stringify(data).includes('test-secret'));
   assert.equal((await worker.fetch(new Request('https://worker/health',{headers:{Origin:'https://other.example'}}),env)).status,403);
 });
+test('queued visitors see their actual position and a longer estimate',async()=>{
+  const {queue,request}=setup();await queue.fetch(request());
+  const response=await queue.fetch(new Request('https://internal/analysis/2',{method:'POST',headers:{'X-Client':'another'}}));
+  const job=await response.json();assert.equal(job.queue_position,2);assert.equal(job.estimated_seconds[0],120);assert.match(job.phase,/2\./);
+});

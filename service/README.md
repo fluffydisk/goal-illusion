@@ -12,7 +12,7 @@ kanıtlarını okur; istemciden prompt, model veya istatistik kabul etmez.
 cd service
 npm ci
 npx wrangler login
-npx wrangler deploy
+python ../scripts/deploy_ai_service.py
 npx wrangler secret put GROQ_API_KEY
 ```
 
