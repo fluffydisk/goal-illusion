@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Goal Illusion — Skor her şeyi anlatır mı?</title>
+<meta name="description" content="Süper Lig ve Bundesliga maçlarında skorun arkasındaki şut kalitesini keşfet. Şut bazlı xG ile olası skorlar, şut haritası ve maç analizi.">
+<meta name="theme-color" content="#0c171a">
+<meta property="og:title" content="Goal Illusion — Skor her şeyi anlatır mı?">
+<meta property="og:description" content="Gerçek skor, xG ve aynı şutlardan oluşabilecek sonuçlar. Süper Lig ve Bundesliga için ücretsiz futbol analitiği.">
+<meta property="og:type" content="website"><meta name="twitter:card" content="summary">
+<link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><a class="brand" href="./">◉ GOAL ILLUSION</a><button id="share">Maçı paylaş ↗</button></header>
+<main>
+<div class="intro"><span class="eyebrow">SKORUN ARKASINDAKİ GERÇEK</span><h1>Skor her şeyi<br><em>anlatır mı?</em></h1><p>Şutların kalitesi, tabeladan farklı bir hikâye anlatabilir.<br>Bir maç seç. Aynı şutlardan oluşabilecek sonuçları keşfet.</p></div>
+<section class="selectors" aria-label="Maç seçimi"><label for="league">Lig<select aria-label="Lig" id="league"></select></label><label for="match">Maç<select aria-label="Maç" id="match"></select></label></section>
+<p id="status" role="status">Maç verileri yükleniyor…</p>
+<div id="analysis" hidden>
+<section class="scoreboard"><p id="competition" class="eyebrow"></p><div class="scoreline"><h2 id="home"></h2><strong id="score"></strong><h2 id="away"></h2></div><p id="date"></p></section>
+<div id="metrics" class="metrics"></div>
+<section class="panel"><h2>Aynı şutlar, olası sonuçlar</h2><p class="muted">Her şutun xG değerinden hesaplanan tam olasılık dağılımı.</p><div id="outcomes"></div><p id="insight" class="insight"></p></section>
+<div class="grid"><section class="panel"><h2>Olası skorlar</h2><div id="heatmap" class="heatmap"></div><p id="tail" class="muted"></p></section><section class="panel"><h2>En olası 5 skor</h2><div id="top"></div></section></div>
+<section class="panel"><h2>Şut haritası</h2><p class="muted">İki takım da sağdaki kaleye hücum edecek şekilde gösterilir. Büyük daire = yüksek xG · ★ = gol. Şuta dokunarak detayını gör.</p><div id="legend" class="legend"></div><div id="pitch"></div><p id="shot-detail" role="status">Bir şut seç.</p></section>
+<section class="panel"><h2>Maç boyunca xG</h2><p class="muted">Devre araları çıkarılır, ek süreler korunur.</p><div id="timeline"></div></section>
+<p id="warnings" class="warning"></p>
+<details class="panel"><summary>Nasıl hesaplanıyor?</summary><p>Her şutun xG değerini gol olma olasılığı sayıyoruz. Bağımsız Bernoulli denemelerinden takım başına Poisson-binomial dağılımı; iki dağılımın dış çarpımından olası skorlar hesaplanır. Rastgele simülasyon kullanılmaz.</p><p>Bu analiz gerçekleşmiş şutlara koşulludur; maç öncesi tahmin veya kesin bir “hak edilen skor” değildir. Ribaundlar, pozisyon bağımlılığı ve skorla değişen taktikler modelde yoktur. Tek bir skorun düşük olasılığı tek başına şans ölçüsü değildir. Seri penaltılar hariçtir; kendi kalesine goller sabit katkı olarak eklenir.</p></details>
+<footer><p id="source"></p><img id="statsbomb" src="statsbomb-logo.png" alt="StatsBomb" width="130" hidden><p id="updated"></p><p>Güncel sezon maçları düzenli veri güncellemeleriyle eklenir. Kaynakta eksik xG bulunan maçlar analiz edilmez. FotMob ve StatsBomb ile resmi bağlantımız yoktur.</p><a id="repo" hidden>GitHub’da projeyi incele ↗</a></footer>
+</div>
+</main><script type="module" src="app.mjs"></script>
+</body></html>

@@ -1,0 +1,772 @@
+{
+  "source": "StatsBomb Open Data",
+  "source_url": "https://github.com/hudl/open-data",
+  "events_url": "https://raw.githubusercontent.com/hudl/open-data/master/data/events/3869118.json",
+  "retrieved_on": "2026-10-11",
+  "original_events_sha256": "b9a98ce90b475f5308bca34d6dde87f332091e61fe78d45badbf3fed53dffc9f",
+  "note": "Original shot, own-goal and period-end events; unused fields removed. xG values unchanged.",
+  "match": {
+    "match_id": 3869118,
+    "match_date": "2022-12-04",
+    "kick_off": "21:00:00.000",
+    "competition": {
+      "competition_id": 43,
+      "country_name": "International",
+      "competition_name": "FIFA World Cup"
+    },
+    "season": {
+      "season_id": 106,
+      "season_name": "2022"
+    },
+    "home_team": {
+      "home_team_id": 768,
+      "home_team_name": "England",
+      "home_team_gender": "male",
+      "home_team_group": null,
+      "country": {
+        "id": 68,
+        "name": "England"
+      },
+      "managers": [
+        {
+          "id": 277,
+          "name": "Gareth Southgate",
+          "nickname": null,
+          "dob": "1970-09-03",
+          "country": {
+            "id": 68,
+            "name": "England"
+          }
+        }
+      ]
+    },
+    "away_team": {
+      "away_team_id": 787,
+      "away_team_name": "Senegal",
+      "away_team_gender": "male",
+      "away_team_group": null,
+      "country": {
+        "id": 202,
+        "name": "Senegal"
+      },
+      "managers": [
+        {
+          "id": 635,
+          "name": "Aliou Cissé",
+          "nickname": null,
+          "dob": "1976-03-24",
+          "country": {
+            "id": 202,
+            "name": "Senegal"
+          }
+        }
+      ]
+    },
+    "home_score": 3,
+    "away_score": 0,
+    "match_status": "available",
+    "match_status_360": "available",
+    "last_updated": "2023-07-15T22:01:09.812380",
+    "last_updated_360": "2023-07-15T22:01:52.119586",
+    "metadata": {
+      "data_version": "1.1.0",
+      "shot_fidelity_version": "2",
+      "xy_fidelity_version": "2"
+    },
+    "match_week": 4,
+    "competition_stage": {
+      "id": 33,
+      "name": "Round of 16"
+    },
+    "stadium": {
+      "id": 1001113,
+      "name": "Al Bayt Stadium",
+      "country": {
+        "id": 185,
+        "name": "Qatar"
+      }
+    },
+    "referee": {
+      "id": 1834,
+      "name": "Ivan Arcides Barton Cisneros",
+      "country": {
+        "id": 67,
+        "name": "El Salvador"
+      }
+    }
+  },
+  "events": [
+    {
+      "id": "eca22731-e62f-4c63-98c5-55f4f5357216",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 1,
+      "timestamp": "00:20:25.796",
+      "minute": 20,
+      "second": 25,
+      "team": {
+        "id": 768,
+        "name": "England"
+      },
+      "player": {
+        "id": 3244,
+        "name": "John Stones"
+      },
+      "location": [
+        113.5,
+        45.4
+      ],
+      "shot": {
+        "statsbomb_xg": 0.08366814,
+        "outcome": {
+          "id": 98,
+          "name": "Off T"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "b1746c86-d6a4-4310-bdf8-bb5e795948c2",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 1,
+      "timestamp": "00:21:59.179",
+      "minute": 21,
+      "second": 59,
+      "team": {
+        "id": 787,
+        "name": "Senegal"
+      },
+      "player": {
+        "id": 20611,
+        "name": "Boulaye Dia"
+      },
+      "location": [
+        108.6,
+        42.7
+      ],
+      "shot": {
+        "statsbomb_xg": 0.05336251,
+        "outcome": {
+          "id": 96,
+          "name": "Blocked"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "aa2725c3-bc6b-4f5b-9865-2cd84124cb40",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 1,
+      "timestamp": "00:22:00.357",
+      "minute": 22,
+      "second": 0,
+      "team": {
+        "id": 787,
+        "name": "Senegal"
+      },
+      "player": {
+        "id": 2941,
+        "name": "Ismaïla Sarr"
+      },
+      "location": [
+        115.7,
+        40.5
+      ],
+      "shot": {
+        "statsbomb_xg": 0.629174,
+        "outcome": {
+          "id": 98,
+          "name": "Off T"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "21b0a72e-9edd-405b-a6aa-edf3c20ff8e3",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 1,
+      "timestamp": "00:31:01.162",
+      "minute": 31,
+      "second": 1,
+      "team": {
+        "id": 787,
+        "name": "Senegal"
+      },
+      "player": {
+        "id": 20611,
+        "name": "Boulaye Dia"
+      },
+      "location": [
+        112.8,
+        28.9
+      ],
+      "shot": {
+        "statsbomb_xg": 0.0358749,
+        "outcome": {
+          "id": 100,
+          "name": "Saved"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "8dd1ce3c-8097-412a-9951-4939e15903f3",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 1,
+      "timestamp": "00:38:00.756",
+      "minute": 38,
+      "second": 0,
+      "team": {
+        "id": 768,
+        "name": "England"
+      },
+      "player": {
+        "id": 3532,
+        "name": "Jordan Brian Henderson"
+      },
+      "location": [
+        107.6,
+        38.0
+      ],
+      "shot": {
+        "statsbomb_xg": 0.13174866,
+        "outcome": {
+          "id": 97,
+          "name": "Goal"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "95d72a08-3916-4d54-85b4-e3777d7f9163",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 1,
+      "timestamp": "00:40:39.888",
+      "minute": 40,
+      "second": 39,
+      "team": {
+        "id": 768,
+        "name": "England"
+      },
+      "player": {
+        "id": 10955,
+        "name": "Harry Kane"
+      },
+      "location": [
+        110.0,
+        39.3
+      ],
+      "shot": {
+        "statsbomb_xg": 0.18422936,
+        "outcome": {
+          "id": 98,
+          "name": "Off T"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "4d429090-9143-4daa-ac16-ed3c8963ad7b",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 1,
+      "timestamp": "00:47:17.176",
+      "minute": 47,
+      "second": 17,
+      "team": {
+        "id": 768,
+        "name": "England"
+      },
+      "player": {
+        "id": 10955,
+        "name": "Harry Kane"
+      },
+      "location": [
+        104.3,
+        50.7
+      ],
+      "shot": {
+        "statsbomb_xg": 0.20664306,
+        "outcome": {
+          "id": 97,
+          "name": "Goal"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "ccc899d1-2bc4-43b2-afaf-2a6c9bd9c8f7",
+      "type": {
+        "id": 34,
+        "name": "Half End"
+      },
+      "period": 1,
+      "timestamp": "00:48:10.033",
+      "minute": 48,
+      "second": 10,
+      "team": {
+        "id": 768,
+        "name": "England"
+      }
+    },
+    {
+      "id": "424496c2-9b0c-4763-8b8c-ff36be495957",
+      "type": {
+        "id": 34,
+        "name": "Half End"
+      },
+      "period": 1,
+      "timestamp": "00:48:10.033",
+      "minute": 48,
+      "second": 10,
+      "team": {
+        "id": 787,
+        "name": "Senegal"
+      }
+    },
+    {
+      "id": "2c5975d3-1c82-4dd5-9645-651ae8eb5b8f",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 2,
+      "timestamp": "00:04:10.377",
+      "minute": 49,
+      "second": 10,
+      "team": {
+        "id": 787,
+        "name": "Senegal"
+      },
+      "player": {
+        "id": 50498,
+        "name": "Pape Matar Sarr"
+      },
+      "location": [
+        92.8,
+        35.2
+      ],
+      "shot": {
+        "statsbomb_xg": 0.018660808,
+        "outcome": {
+          "id": 98,
+          "name": "Off T"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "3ad6ec4f-2f39-41df-ade5-a91827872206",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 2,
+      "timestamp": "00:08:40.897",
+      "minute": 53,
+      "second": 40,
+      "team": {
+        "id": 768,
+        "name": "England"
+      },
+      "player": {
+        "id": 22084,
+        "name": "Bukayo Saka"
+      },
+      "location": [
+        107.7,
+        53.4
+      ],
+      "shot": {
+        "statsbomb_xg": 0.03518777,
+        "outcome": {
+          "id": 98,
+          "name": "Off T"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "60b34d82-7a7b-4b3a-ba28-7ec704a0941a",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 2,
+      "timestamp": "00:10:45.235",
+      "minute": 55,
+      "second": 45,
+      "team": {
+        "id": 768,
+        "name": "England"
+      },
+      "player": {
+        "id": 10955,
+        "name": "Harry Kane"
+      },
+      "location": [
+        90.5,
+        27.1
+      ],
+      "shot": {
+        "statsbomb_xg": 0.015214441,
+        "outcome": {
+          "id": 100,
+          "name": "Saved"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "541395bf-9398-4670-887e-e79c1a8ba223",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 2,
+      "timestamp": "00:11:43.534",
+      "minute": 56,
+      "second": 43,
+      "team": {
+        "id": 768,
+        "name": "England"
+      },
+      "player": {
+        "id": 22084,
+        "name": "Bukayo Saka"
+      },
+      "location": [
+        111.0,
+        35.9
+      ],
+      "shot": {
+        "statsbomb_xg": 0.21738943,
+        "outcome": {
+          "id": 97,
+          "name": "Goal"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "acf5fa91-3fee-4042-85a7-97dfc596d6d9",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 2,
+      "timestamp": "00:23:25.317",
+      "minute": 68,
+      "second": 25,
+      "team": {
+        "id": 787,
+        "name": "Senegal"
+      },
+      "player": {
+        "id": 50498,
+        "name": "Pape Matar Sarr"
+      },
+      "location": [
+        89.0,
+        36.2
+      ],
+      "shot": {
+        "statsbomb_xg": 0.013223637,
+        "outcome": {
+          "id": 96,
+          "name": "Blocked"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "64294436-c0e0-4e75-a6de-abd93a212c4e",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 2,
+      "timestamp": "00:28:18.517",
+      "minute": 73,
+      "second": 18,
+      "team": {
+        "id": 787,
+        "name": "Senegal"
+      },
+      "player": {
+        "id": 50498,
+        "name": "Pape Matar Sarr"
+      },
+      "location": [
+        87.8,
+        49.9
+      ],
+      "shot": {
+        "statsbomb_xg": 0.021199826,
+        "outcome": {
+          "id": 98,
+          "name": "Off T"
+        },
+        "type": {
+          "id": 62,
+          "name": "Free Kick"
+        }
+      }
+    },
+    {
+      "id": "f04052f9-712a-4992-a561-b3a46bb0d53b",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 2,
+      "timestamp": "00:38:38.322",
+      "minute": 83,
+      "second": 38,
+      "team": {
+        "id": 787,
+        "name": "Senegal"
+      },
+      "player": {
+        "id": 2941,
+        "name": "Ismaïla Sarr"
+      },
+      "location": [
+        111.6,
+        39.3
+      ],
+      "shot": {
+        "statsbomb_xg": 0.107544675,
+        "outcome": {
+          "id": 98,
+          "name": "Off T"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "1cf6fa6b-f9f5-46ae-af7f-af287afdfdcd",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 2,
+      "timestamp": "00:41:12.785",
+      "minute": 86,
+      "second": 12,
+      "team": {
+        "id": 787,
+        "name": "Senegal"
+      },
+      "player": {
+        "id": 21026,
+        "name": "Pape Gueye"
+      },
+      "location": [
+        96.7,
+        52.4
+      ],
+      "shot": {
+        "statsbomb_xg": 0.027956013,
+        "outcome": {
+          "id": 96,
+          "name": "Blocked"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "eea1e7de-b4fb-4e1a-81bf-43a79ad5d467",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 2,
+      "timestamp": "00:43:51.159",
+      "minute": 88,
+      "second": 51,
+      "team": {
+        "id": 787,
+        "name": "Senegal"
+      },
+      "player": {
+        "id": 50498,
+        "name": "Pape Matar Sarr"
+      },
+      "location": [
+        93.1,
+        38.3
+      ],
+      "shot": {
+        "statsbomb_xg": 0.032847784,
+        "outcome": {
+          "id": 98,
+          "name": "Off T"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "9c16738b-cf6c-4669-a694-276a322ff6d8",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 2,
+      "timestamp": "00:45:23.854",
+      "minute": 90,
+      "second": 23,
+      "team": {
+        "id": 768,
+        "name": "England"
+      },
+      "player": {
+        "id": 3318,
+        "name": "Marcus Rashford"
+      },
+      "location": [
+        117.8,
+        45.9
+      ],
+      "shot": {
+        "statsbomb_xg": 0.1459426,
+        "outcome": {
+          "id": 98,
+          "name": "Off T"
+        },
+        "type": {
+          "id": 87,
+          "name": "Open Play"
+        }
+      }
+    },
+    {
+      "id": "8ea7d7fe-7f86-4c68-be76-1dbe52730c60",
+      "type": {
+        "id": 16,
+        "name": "Shot"
+      },
+      "period": 2,
+      "timestamp": "00:47:22.889",
+      "minute": 92,
+      "second": 22,
+      "team": {
+        "id": 787,
+        "name": "Senegal"
+      },
+      "player": {
+        "id": 88123,
+        "name": "Cheikh Ahmadou Bamba Mbacke Dieng"
+      },
+      "location": [
+        94.0,
+        54.7
+      ],
+      "shot": {
+        "statsbomb_xg": 0.03296228,
+        "outcome": {
+          "id": 96,
+          "name": "Blocked"
+        },
+        "type": {
+          "id": 62,
+          "name": "Free Kick"
+        }
+      }
+    },
+    {
+      "id": "4ff86d96-07b9-4086-8258-ae229ecb3e61",
+      "type": {
+        "id": 34,
+        "name": "Half End"
+      },
+      "period": 2,
+      "timestamp": "00:49:12.685",
+      "minute": 94,
+      "second": 12,
+      "team": {
+        "id": 787,
+        "name": "Senegal"
+      }
+    },
+    {
+      "id": "025105dc-6273-4068-9a08-97614b18a8c9",
+      "type": {
+        "id": 34,
+        "name": "Half End"
+      },
+      "period": 2,
+      "timestamp": "00:49:12.685",
+      "minute": 94,
+      "second": 12,
+      "team": {
+        "id": 768,
+        "name": "England"
+      }
+    }
+  ]
+}
