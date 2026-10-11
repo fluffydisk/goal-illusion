@@ -7,8 +7,10 @@ function el(tag, text, className) { const e=document.createElement(tag); e.textC
 function svgNode(tag,attrs={}) { const e=document.createElementNS('http://www.w3.org/2000/svg',tag); for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v); return e; }
 function graphic(container,viewBox,label) {const svg=svgNode('svg',{viewBox,role:'img','aria-label':label}); $(container).replaceChildren(svg);return svg;}
 let snapshot, available, stories;
+function storyFor(d) {return stories?.source_updated_at===snapshot.updated_at?stories.stories?.[d.match.id]:null;}
+function hasStory(d) {const s=storyFor(d);return s?.status==='ready'&&s.narrative?.fingerprint===s.facts?.fingerprint;}
 function renderStory(d, a, sums) {
-  const item=stories?.source_updated_at===snapshot.updated_at?stories.stories?.[d.match.id]:null;
+  const item=storyFor(d);
   const facts=item?.facts, prose=item?.status==='ready'?item.narrative:null;
   const valid=prose&&facts&&prose.fingerprint===facts.fingerprint&&
     typeof prose.headline==='string'&&typeof prose.explanation==='string'&&
@@ -16,7 +18,7 @@ function renderStory(d, a, sums) {
     prose.evidence_ids.every(id=>facts.evidence.some(e=>e.id===id));
   $('story-label').textContent=valid?'MAÇIN HİKÂYESİ · AI YORUMU':'MAÇIN BULGULARI';
   $('story-headline').textContent=valid?prose.headline:'Bu maçın AI yorumu henüz hazır değil.';
-  $('story-explanation').textContent=valid?prose.explanation:'Şut verilerinden hesaplanan bulguları ve ayrıntılı analizi aşağıda inceleyebilirsin.';
+  $('story-explanation').textContent=valid?prose.explanation:(item?.status==='unavailable'?'Yorum üretimi kontrollerden geçmedi ve yeniden denenecek. Sayısal analizi aşağıda inceleyebilirsin.':'Bu maç üretim kuyruğunda. Şut verilerinden hesaplanan bulguları aşağıda inceleyebilirsin.');
   const evidence=facts?.evidence||[
     {id:'chances',label:'Üretilen fırsatların kalitesi',text:`${d.match.home}: ${dec(sums[0])} xG · ${d.match.away}: ${dec(sums[1])} xG.`},
     {id:'outcomes',label:'Aynı şutlarla olası sonuçlar',text:`${d.match.home} galibiyeti ${pct(a.win)}, beraberlik ${pct(a.draw)}, ${d.match.away} galibiyeti ${pct(a.loss)}.`}
@@ -29,7 +31,7 @@ function renderStory(d, a, sums) {
 }
 function selectLeague() {
   available=snapshot.matches.filter(d=>String(d.league_id||'example')===$('league').value).sort((a,b)=>b.match.date.localeCompare(a.match.date));
-  $('match').replaceChildren(...available.map(d=>new Option(`${d.match.date.slice(0,10)} · ${d.match.home} ${d.home_score}–${d.away_score} ${d.match.away}`,d.match.id)));
+  $('match').replaceChildren(...available.map(d=>new Option(`${d.match.date.slice(0,10)} · ${d.match.home} ${d.home_score}–${d.away_score} ${d.match.away}${hasStory(d)?' · AI ✓':''}`,d.match.id)));
   render();
 }
 function render() {
@@ -76,7 +78,7 @@ function render() {
   $('statsbomb').hidden=d.source_name!=='StatsBomb Open Data';
   if(!$('statsbomb').hidden){const license=el('a','StatsBomb veri lisansı');license.href='data/STATSBOMB_LICENSE.pdf';$('source').append(' ',license);}
   $('updated').textContent=`Veri dosyası güncellendi: ${new Date(snapshot.updated_at).toLocaleString('tr-TR')}${d.retrieved_at?' · Maç verisi alındı: '+new Date(d.retrieved_at).toLocaleString('tr-TR'):''}`;
-  $('analysis').hidden=false;$('status').textContent=`${available.length} maç · ${snapshot.issues.length?`${snapshot.issues.length} maç/kaynak verisi güncellemede alınamadı; mevcut doğrulanmış maçlar gösteriliyor.`:'Tamamlanmış ve şut bazlı xG bulunan maçlar.'}`;
+  $('analysis').hidden=false;$('status').textContent=`${available.length} maç · ${available.filter(hasStory).length} AI yorumu hazır · ${snapshot.issues.length?`${snapshot.issues.length} maç/kaynak verisi güncellemede alınamadı; mevcut doğrulanmış maçlar gösteriliyor.`:'Tamamlanmış ve şut bazlı xG bulunan maçlar.'}`;
   const url=new URL(location.href);url.searchParams.set('match',m.id);history.replaceState(null,'',url);
 }
 $('league').addEventListener('change',selectLeague);$('match').addEventListener('change',render);

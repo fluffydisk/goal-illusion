@@ -160,7 +160,7 @@ beraberlikte yönlü skor farkı ölçüsü verilmez. Sıfır şutta ortalama xG
 
 [Groq şemalı çıktı API’sinin](https://console.groq.com/docs/structured-outputs) strict JSON modu kullanılır.
 Modelden Türkçe başlık, kısa açıklama ve kanıt kimlikleri alınır; sayılar uygulamanın hesabından
-gelir. Geçersiz kanıt bağlantıları, doğrulanmış maç skoru dışındaki rakamlar/HTML ve belirli desteklenmeyen
+gelir. Geçersiz kanıt bağlantıları, verilerle eşleşmeyen rakamlar/HTML ve belirli desteklenmeyen
 iddialar reddedilir; bir düzeltme denemesi yapılır. Groq üretiminde metin ayrıca ayrı
 bir editör çağrısıyla gerçek bulgulara karşı kontrol edilir. Takım karşılaştırması,
 desteklenmeyen nedensellik veya anlam sorunları saptanırsa yorum yayımlanmaz. Bu
@@ -207,3 +207,8 @@ eklendi; yanlış nedensellik ifadeleri de reddedilir.
 
 Reddedilen yorumlar yeniden denenebilir; başarısız deneme sayısı yüksek maçlar, hiç
 denenmemiş maçların önünü kesmemesi için kuyruğun gerisine alınır.
+
+Yayın sonrası yeni yorum üretildiyse ve eksik maç varsa bir sonraki paket otomatik
+başlatılır. İlerleme yoksa zincir durur; düzenli veri güncellemesi daha sonra tekrar
+dener. Maç listesinde hazır yorumlar AI işaretiyle gösterilir ve lig bazlı kapsam
+ekranda belirtilir.
