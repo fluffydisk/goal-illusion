@@ -30,8 +30,8 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: web/data/stories.json
-          key: stories-v7b-published-${{ github.run_id }}
-          restore-keys: stories-v7b-published-
+          key: stories-v9-story2-${{ github.run_id }}
+          restore-keys: stories-v9-story2-
       - name: Refresh evidence and preserve existing analyses
         run: python scripts/generate_stories.py --provider groq --evidence-only
       - name: Bind match inputs and AI evidence in one snapshot

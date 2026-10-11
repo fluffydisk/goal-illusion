@@ -7,7 +7,7 @@ from dataclasses import asdict
 from goal_illusion.analysis import analyze
 from goal_illusion.data import MatchData
 
-STORY_VERSION = 1
+STORY_VERSION = 2
 
 
 def fingerprint(data: MatchData) -> str:
@@ -130,6 +130,26 @@ def build_evidence(data: MatchData) -> dict:
                 f"{data.away_fixed} sabit gol var; şut kalitesine dahil değildir.",
             }
         )
+    # Stable event IDs bind prose, evidence and graphics to the same input.
+    events = []
+    for index, shot in enumerate(sorted(data.shots, key=lambda s: (s.elapsed_minutes, s.period))):
+        team = match.home if shot.team_id == match.home_id else match.away
+        event = {"id": f"shot_{index}", "team": team, "player": shot.player or None,
+                 "minute": shot.minute, "added_minutes": shot.added_minutes,
+                 "elapsed_minutes": shot.elapsed_minutes, "period": shot.period,
+                 "xg": shot.xg, "goal": shot.outcome == "Goal"}
+        events.append(event)
+        clock = f"{shot.minute}" + (f"+{shot.added_minutes}" if shot.added_minutes else "")
+        evidence.append({"id": event["id"], "label": f"{clock}′ · {team}",
+                         "text": f"{shot.player or 'Oyuncu bilgisi yok'}: "
+                         f"{'gol' if event['goal'] else 'gol olmayan şut'}, {fmt(shot.xg)} xG."})
+    sections = ["opening", "first_half", "second_half", "chances", "verdict", "closing"]
+    if not any(e["period"] == 1 for e in events) or not any(e["period"] == 2 for e in events):
+        sections = ["opening", "match_flow", "chances", "verdict", "closing"]
+    if data.duration > 90 or any(e["period"] in (3, 4) for e in events):
+        sections.insert(sections.index("chances"), "extra_time")
+    key_ids = {e["id"] for e in sorted(events, key=lambda e: -e["xg"])[:3]}
+    key_ids.update(e["id"] for e in events if e["goal"])
     return {
         "version": STORY_VERSION,
         "fingerprint": fingerprint(data),
@@ -140,6 +160,9 @@ def build_evidence(data: MatchData) -> dict:
         "actual_score_probability": analysis.score_probability(data.home_score, data.away_score),
         "observed_margin_tail": tail,
         "evidence": evidence,
+        "events": events,
+        "key_event_ids": [e["id"] for e in events if e["id"] in key_ids],
+        "sections": sections,
         "limitations": "Gerçekleşmiş şutlara koşullu analiz. Şutlar bağımsız kabul edilir. "
         "Pres, topa sahip olma, savunma ve şuta dönüşmeyen ataklar ölçülmez.",
         "warnings": list(data.warnings),

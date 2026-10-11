@@ -2,7 +2,7 @@ import contract from './contract.json' with {type:'json'};
 import {validateProse} from './quality.mjs';
 
 const json=(data,status=200)=>Response.json(data,{status});
-const phases={queued:'Sırada bekliyor',generating:'Maça özgü yorum yazılıyor',reviewing:'Veriler ve yorum karşılaştırılıyor',waiting_provider:'AI sağlayıcısının sırası bekleniyor',ready:'Analiz hazır',failed:'Analiz tamamlanamadı',rate_limited:'Ücretsiz kota doldu'};
+const phases={queued:'Sırada bekliyor',generating:'Maçın hikâyesi yazılıyor',reviewing:'Veriler ve yorum karşılaştırılıyor',waiting_provider:'AI sağlayıcısının sırası bekleniyor',ready:'Analiz hazır',failed:'Analiz tamamlanamadı',rate_limited:'Ücretsiz kota doldu'};
 export function publicJob(job, position) {
   if (!job) return {status:'missing'};
   const {status,started_at,updated_at,narrative,fingerprint,error,retry_at,attempt,resume_status}=job;
@@ -44,10 +44,19 @@ export class AnalysisQueue {
     try {
       const id=new URL(request.url).pathname.split('/').pop(), item=await this.facts(id);
       if (!item) return json({error:'Doğrulanmış maç verisi bulunamadı.'},404);
+      const params=new URL(request.url).searchParams;
+      if (item.facts.version!==contract.story_version ||
+          (params.has('story_version') && Number(params.get('story_version'))!==contract.story_version) ||
+          (params.has('prompt_version') && Number(params.get('prompt_version'))!==contract.prompt_version))
+        return json({error:'AI Review güncelleniyor. Sayfayı yenileyip biraz sonra tekrar dene.'},503);
       const expected=new URL(request.url).searchParams.get('fingerprint');
       if(expected && expected!==item.facts.fingerprint)
         return json({status:'data_changed',fingerprint:item.facts.fingerprint},409);
-      if (item.status==='ready' && item.narrative?.fingerprint===item.facts.fingerprint && item.narrative.prompt_version===contract.prompt_version) return json({status:'ready',narrative:item.narrative,fingerprint:item.facts.fingerprint});
+      if (item.status==='ready' && item.narrative?.fingerprint===item.facts.fingerprint && item.narrative.prompt_version===contract.prompt_version && item.narrative.story_version===contract.story_version) {
+        const {headline,summary,cards}=item.narrative;
+        validateProse({headline,summary,cards},item.facts,item.model_facts);
+        return json({status:'ready',narrative:item.narrative,fingerprint:item.facts.fingerprint});
+      }
       const key=`job:v${contract.prompt_version}:${id}:${item.facts.fingerprint}`;
       return await this.ctx.blockConcurrencyWhile(async()=>{
         let job=await this.ctx.storage.get(key);
@@ -81,7 +90,7 @@ export class AnalysisQueue {
     const response=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',headers:{'Authorization':`Bearer ${this.env.GROQ_API_KEY}`,'Content-Type':'application/json'},
       body:JSON.stringify({model:contract.model,messages,response_format:{type:'json_schema',json_schema:{name,strict:true,schema}},
-        reasoning_effort:'high',temperature:review?0:0.3,max_completion_tokens:4096}),
+        reasoning_effort:'high',temperature:review?0:0.3,max_completion_tokens:8192}),
       signal:AbortSignal.timeout(120000)
     });
     if (response.status===429) {const error=new Error('AI sağlayıcısının ücretsiz kotası doldu.');error.quota=true;const delay=Number(response.headers.get('retry-after'));error.retryMs=Number.isFinite(delay)&&delay>0?Math.max(20000,Math.min(86400000,delay*1000)):60000;throw error;}

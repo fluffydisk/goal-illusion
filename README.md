@@ -173,8 +173,8 @@ kazanma olasılığını hesaplar. Son ölçü tek bir tam skorun düşük olas�
 beraberlikte yönlü skor farkı ölçüsü verilmez. Sıfır şutta ortalama xG tanımsızdır.
 
 [Groq şemalı çıktı API’sinin](https://console.groq.com/docs/structured-outputs) strict JSON modu kullanılır.
-Modelden Türkçe başlık, kısa açıklama ve kanıt kimlikleri alınır; sayılar uygulamanın hesabından
-gelir. Geçersiz kanıt bağlantıları, verilerle eşleşmeyen rakamlar/HTML ve belirli desteklenmeyen
+Modelden Türkçe ana çıkarım, kısa özet ve 5–7 story kartı alınır. Her kart ayrı yorum ve
+kanıt kimlikleri içerir; sayılar ve olay sıralaması uygulamanın hesabından gelir. Geçersiz kanıt bağlantıları, verilerle eşleşmeyen rakamlar/HTML ve belirli desteklenmeyen
 iddialar reddedilir; bir düzeltme denemesi yapılır. Groq üretiminde metin ayrıca ayrı
 bir editör çağrısıyla gerçek bulgulara karşı kontrol edilir. Takım karşılaştırması,
 desteklenmeyen nedensellik veya anlam sorunları saptanırsa yorum yayımlanmaz. Bu
@@ -215,9 +215,29 @@ Streamlit ekranında hazır yorum kullanılır. Yeni/eskiden yayımlanmayan maç
 adres seçilebilir. `--limit 3` yalnızca ilk üç eksik yorumu üretir; tüm maçların
 kanıtları yine yazılır. `--evidence-only` model çağrısı yapmaz.
 
-Mevcut arşivin 105 maçı için Codex, hesaplanan maç bulgularını okuyarak her maça ayrı
-özgün yorum hazırladı. Bu başlangıç arşivi `web/data/reviewed-stories.json` içinde
-`provider=assistant`, `model=Codex` kaynağıyla tutulur; Groq çıktısı olarak etiketlenmez.
-Üretim bu kayıtları yalnızca maç parmak izi eşleşiyorsa kullanır. Veri değişirse kayıt
-geçersiz olur; ziyaretçi talep ettiğinde Groq yeniden üretir. Yeni maçlar da talep üzerine Groq üzerinden üretilir. Bu dosya
-cümle şablonları içermez; her kayıt belirli bir maçın sayısal bulgularına aittir.
+Eski kısa yorum arşivi `web/data/reviewed-stories.json` içinde kaynak bilgileriyle korunur.
+Story v2 / prompt v9 bu kayıtları hazır review olarak kullanmaz. Veri ve sözleşme
+sürümleri eşleşen yeni hikâyeler yalnızca kullanıcı butona bastığında üretilir.
+
+### Story deneyimi
+
+**AI Review oluştur** ilk üretimi başlatır; hazır olduğunda **Maçın hikâyesini aç**
+butonu görünür. Mobilde tam ekran, masaüstünde odaklı bir pencere açılır. Kartlar
+metin uzunluğuna göre 10–25 saniyede ilerler; ok tuşları, dokunma ve yatay kaydırma
+da desteklenir. Duraklatma, açık kanıt detayı veya gizli sekme ilerlemeyi durdurur.
+Azaltılmış hareket tercihinde otomatik oynatma kapalı başlar. Son kart kapanmaz;
+baştan izlenebilir. Bekleme widget'ındaki veri notları AI yorumu değildir.
+
+Görsel test (Playwright modülü ve Chromium kurulu ortamda):
+
+```bash
+python -m http.server 8765 --bind 127.0.0.1 --directory web
+# Ayrı terminal; PLAYWRIGHT_MODULE gerekirse kurulu modülün mutlak yoludur.
+node scripts/check_story_ui.mjs
+```
+
+Bu test AI servisini taklit eder, üretim yapmaz ve `/tmp/story-*.png` görsellerini
+oluşturur. Gerçek üç maçlık bağımsız üretim/kontrol testi, sunucu anahtarı güvenli
+ortam değişkeni olarak sağlandığında `node scripts/check_ai_service.mjs` ile yapılır.
+Çıktılar `/tmp/ai-quality-check-<match_id>.json` altında kalır, siteye yayımlanmaz.
+Varsayılan örnekler farklı skor, golsüz beraberlik ve kendi kalesine gol içeren maçtır.

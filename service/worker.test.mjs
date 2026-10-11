@@ -8,7 +8,8 @@ import contract from './contract.json' with {type:'json'};
 const archive=JSON.parse(readFileSync(new URL('../web/data/stories.json',import.meta.url)));
 const original=Object.values(archive.stories)[0];
 const item={...original,status:'pending',narrative:null};
-const valid=original.narrative;
+const valid={headline:'Yakın fırsat dağılımına rağmen farklı bir skor',summary:'İki takımın toplam gol beklentileri birbirine yakın kaldı.',
+ cards:item.facts.sections.map(type=>({type,title:'Maçın fırsat dağılımı',text:'İki takımın toplam gol beklentileri birbirine yakın kaldı. Gerçek skor ise aynı şutlarla oluşabilecek sonuçlardan yalnızca biri.',evidence_ids:['chances','outcomes']}))};
 test('mismatched client version is rejected before quota or queue changes',async()=>{
   const {queue,storage}=setup();
   const response=await queue.fetch(new Request('https://internal/analysis/1?fingerprint=old',{method:'POST'}));
@@ -33,7 +34,7 @@ test('queued drafts from an old writing policy stop without provider calls',asyn
   assert.deepEqual(await storage.get('queue'),[]);
 });
 test('headline metaphors fail the style gate before independent review',()=>{
-  assert.throws(()=>validateProse({headline:'Kasımpaşa galibiyeti dengenin içinden geliyor.',explanation:valid.explanation,evidence_ids:valid.evidence_ids},item.facts,item.model_facts),/manşet/);
+  assert.throws(()=>validateProse({headline:'Kasımpaşa galibiyeti dengenin içinden geliyor.',summary:valid.summary,cards:valid.cards},item.facts,item.model_facts),/manşet/);
 });
 class Storage {
   values=new Map(); alarm=null;
@@ -51,11 +52,11 @@ function setup() {
   return {storage,queue,request};
 }
 test('all archive prose passes the shared quality gate',()=>{
-  for(const record of Object.values(archive.stories)) if(record.narrative) validateProse({headline:record.narrative.headline,explanation:record.narrative.explanation,evidence_ids:record.narrative.evidence_ids},record.facts,record.model_facts);
+  for(const record of Object.values(archive.stories)) if(record.narrative) validateProse({headline:record.narrative.headline,summary:record.narrative.summary,cards:record.narrative.cards},record.facts,record.model_facts);
 });
 test('invented numbers, unsupported claims and missing evidence fail',()=>{
-  const prose={headline:valid.headline,explanation:valid.explanation,evidence_ids:valid.evidence_ids};
-  for(const bad of [{...prose,explanation:'Bu maçta toplam xG değeri 99999.99 oldu.'},{...prose,headline:'Kaleci ve savunma galibiyeti getirdi.'},{...prose,evidence_ids:['missing','outcomes']}]) assert.throws(()=>validateProse(bad,item.facts,item.model_facts));
+  const prose={headline:valid.headline,summary:valid.summary,cards:valid.cards};
+  for(const bad of [{...prose,summary:'Bu maçta toplam xG değeri 99999.99 oldu.'},{...prose,headline:'Kaleci ve savunma galibiyeti getirdi.'},{...prose,cards:[{...valid.cards[0],evidence_ids:['missing','outcomes']},...valid.cards.slice(1)]}]) assert.throws(()=>validateProse(bad,item.facts,item.model_facts));
 });
 test('simultaneous visitors enqueue one job and GET never generates',async()=>{
   const {queue,storage,request}=setup();
@@ -66,7 +67,7 @@ test('simultaneous visitors enqueue one job and GET never generates',async()=>{
 });
 test('generation requires an independent approval; result is shared and reusable',async()=>{
   const {queue,storage,request}=setup();await queue.fetch(request());let calls=0;
-  queue.complete=async()=>{calls++;return calls===1?{headline:valid.headline,explanation:valid.explanation,evidence_ids:valid.evidence_ids}:{approved:true,reason:'Veriyle uyumlu.'};};
+  queue.complete=async()=>{calls++;return calls===1?{headline:valid.headline,summary:valid.summary,cards:valid.cards}:{approved:true,reason:'Veriyle uyumlu.'};};
   await queue.alarm();assert.equal((await (await queue.fetch(request('GET'))).json()).status,'waiting_provider');
   await queue.alarm();const ready=await (await queue.fetch(request('GET'))).json();
   assert.equal(ready.status,'ready');assert.equal(ready.narrative.provider,'groq');assert.equal(ready.narrative.fingerprint,item.facts.fingerprint);
@@ -74,7 +75,7 @@ test('generation requires an independent approval; result is shared and reusable
 });
 test('rejected prose is regenerated and never cached as ready',async()=>{
   const {queue,storage,request}=setup();await queue.fetch(request());
-  queue.complete=async(_,__,name)=>name==='match_story'?{headline:valid.headline,explanation:valid.explanation,evidence_ids:valid.evidence_ids}:{approved:false,reason:'Ters karşılaştırma.'};
+  queue.complete=async(_,__,name)=>name==='match_story'?{headline:valid.headline,summary:valid.summary,cards:valid.cards}:{approved:false,reason:'Ters karşılaştırma.'};
   for(let i=0;i<4;i++)await queue.alarm();
   const result=await (await queue.fetch(request('GET'))).json();assert.equal(result.status,'failed');assert.equal(result.narrative,undefined);assert.equal((await storage.get('queue')).length,0);
 });
@@ -96,7 +97,7 @@ test('queue preserves a second visitor added during model generation',async()=>{
   const {queue,storage,request}=setup();await queue.fetch(request());
   queue.complete=async()=>{
     const waiting=await storage.get('queue');await storage.put('queue',[...waiting,'second-job']);
-    return {headline:valid.headline,explanation:valid.explanation,evidence_ids:valid.evidence_ids};
+    return {headline:valid.headline,summary:valid.summary,cards:valid.cards};
   };
   await queue.alarm();
   queue.complete=async()=>({approved:true,reason:'Doğru.'});await queue.alarm();
@@ -114,7 +115,7 @@ test('unconfigured credentials cannot consume quota or start jobs',async()=>{
 test('temporary provider limits preserve the draft and resume its review',async()=>{
   const {queue,storage,request}=setup();await queue.fetch(request());let generated=0,reviewed=0;
   queue.complete=async(_,__,name)=>{
-    if(name==='match_story'){generated++;return {headline:valid.headline,explanation:valid.explanation,evidence_ids:valid.evidence_ids};}
+    if(name==='match_story'){generated++;return {headline:valid.headline,summary:valid.summary,cards:valid.cards};}
     reviewed++;if(reviewed===1){const e=new Error('Temporary quota');e.quota=true;e.retryMs=30000;throw e;}return {approved:true,reason:'Doğru.'};
   };
   await queue.alarm();await queue.alarm();
@@ -136,7 +137,7 @@ test('queued visitors see their actual position and a longer estimate',async()=>
 test('a manual retry after longer quota expiry reuses the retained draft',async()=>{
   const {queue,storage,request}=setup();await queue.fetch(request());let generated=0,reviewed=0;
   queue.complete=async(_,__,name)=>{
-    if(name==='match_story'){generated++;return {headline:valid.headline,explanation:valid.explanation,evidence_ids:valid.evidence_ids};}
+    if(name==='match_story'){generated++;return {headline:valid.headline,summary:valid.summary,cards:valid.cards};}
     if(++reviewed===1){const e=new Error('Long quota');e.quota=true;e.retryMs=3600000;throw e;}return {approved:true,reason:'Doğru.'};
   };
   await queue.alarm();await queue.alarm();const key=[...storage.values.keys()].find(k=>k.startsWith('job:'));
@@ -144,4 +145,25 @@ test('a manual retry after longer quota expiry reuses the retained draft',async(
   job.retry_at=0;await storage.put(key,job);await storage.put('provider_cooldown',0);
   await queue.fetch(request());await queue.alarm();
   assert.equal((await (await queue.fetch(request('GET'))).json()).status,'ready');assert.equal(generated,1);
+});
+
+test('new service refuses old evidence without charging quota',async()=>{
+ const {queue,storage,request}=setup();queue.facts=async()=>({...item,facts:{...item.facts,version:1}});
+ assert.equal((await queue.fetch(request())).status,503);assert.equal(await storage.get('quota'),undefined);
+});
+test('client contract mismatch cannot start generation',async()=>{
+ const {queue,storage}=setup();
+ assert.equal((await queue.fetch(new Request('https://internal/analysis/1?story_version=1',{method:'POST'}))).status,503);
+ assert.equal(await storage.get('quota'),undefined);
+});
+for(const reason of ['Oyuncu yanlış takımla eşleştirilmiş.','Gol dakikası yanlış.','İkinci yarı olayı ilk yarıda anlatılmış.'])test(`editor rejection prevents publication: ${reason}`,async()=>{
+ const {queue,request}=setup();await queue.fetch(request());
+ queue.complete=async(_,__,name)=>name==='match_story'?valid:{approved:false,reason};
+ for(let i=0;i<4;i++)await queue.alarm();
+ const result=await(await queue.fetch(request('GET'))).json();assert.equal(result.status,'failed');assert.equal(result.narrative,undefined);
+});
+test('every story card is checked, including late unsupported claims',()=>{
+ const value=structuredClone(valid);value.cards.at(-1).text='Kaleci ve savunma galibiyeti getirdi. Bu maçın sonucunu kesinlikle bu performans belirledi.';
+ assert.throws(()=>validateProse(value,item.facts,item.model_facts));
+ const wrong=structuredClone(valid);wrong.cards.reverse();assert.throws(()=>validateProse(wrong,item.facts,item.model_facts));
 });

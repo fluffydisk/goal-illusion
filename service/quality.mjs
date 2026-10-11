@@ -1,5 +1,5 @@
 // The prompt and reviewer contract are exported from the existing Python engine.
-export function validateProse(value, facts, modelFacts) {
+function validateShortProse(value, facts, modelFacts, checkTotals=true) {
   if (!value || Object.keys(value).sort().join(',') !== 'evidence_ids,explanation,headline') throw new Error('Geçersiz yorum biçimi.');
   const allowed = new Set([0,1,2,facts.home.goals,facts.away.goals]);
   function collect(v) {
@@ -8,7 +8,7 @@ export function validateProse(value, facts, modelFacts) {
   }
   collect(modelFacts);
   collect(facts);
-  for (const [key,min,max] of [['headline',15,180],['explanation',30,500]]) {
+  for (const [key,min,max] of [['headline',8,180],['explanation',30,650]]) {
     const text=value[key];
     if (typeof text !== 'string' || text.trim().length<min || text.trim().length>max) throw new Error('Yorum beklenen uzunlukta değil.');
     if (/fırsat terazisi|dengenin içinden|ayrı bir hikâye|tek yönlülük|tabela[^.]*gizli|ağırlık verdiği sonuç/u.test(text.toLocaleLowerCase('tr-TR'))) throw new Error('Yorum soyut manşet dili içeriyor; bulguyu doğrudan açıkla.');
@@ -18,10 +18,33 @@ export function validateProse(value, facts, modelFacts) {
     for (const number of stripped.match(/\d+(?:[.,]\d+)?/g)||[]) if (!allowed.has(Number(number.replace(',','.')))) throw new Error('Veride bulunmayan sayı.');
     const lower=text.toLocaleLowerCase('tr-TR');
     if (/şanslı|şanssız|\bşans\b|hak et|hakett|pres|kaleci|savunma|taktik|hakem|topa sahip|kesinlikle|luck|deserv|possession|goalkeeper|defen|dominat|baskın oyun|uzaklık|sonucu doğrula|şut başına gol oran|garanti|öngör|sonucu belirledi|kesin galibiyet|galibiyeti getirdi|skoru belirledi|kanıtladı|haklı çıkar|domine/u.test(lower)) throw new Error('Şut verisinden çıkarılamayan iddia.');
-    if (facts.home.goals===facts.away.goals && /daha (az|fazla|çok) gol(?:le|ü|ler|leri)?\b(?!\s+(?:fırsat|beklenti|olasılık|pozisyon))/u.test(lower)) throw new Error('Eşit skora aykırı iddia.');
-    if (facts.home.shots===facts.away.shots && /daha (az|fazla|çok) şut(?:la|u|lar|ları)?\b(?!\s+(?:kalite|beklenti|olasılık))/u.test(lower)) throw new Error('Eşit şut sayısına aykırı iddia.');
+    if (checkTotals && facts.home.goals===facts.away.goals && /daha (az|fazla|çok) gol(?:le|ü|ler|leri)?\b(?!\s+(?:fırsat|beklenti|olasılık|pozisyon))/u.test(lower)) throw new Error('Eşit skora aykırı iddia.');
+    if (checkTotals && facts.home.shots===facts.away.shots && /daha (az|fazla|çok) şut(?:la|u|lar|ları)?\b(?!\s+(?:kalite|beklenti|olasılık))/u.test(lower)) throw new Error('Eşit şut sayısına aykırı iddia.');
   }
   const ids=value.evidence_ids, known=new Set(facts.evidence.map(e=>e.id));
-  if (!Array.isArray(ids) || ids.length<2 || ids.length>4 || new Set(ids).size!==ids.length || ids.some(id=>!known.has(id))) throw new Error('Kanıt bağlantıları geçersiz.');
+  if (!Array.isArray(ids) || ids.length<1 || ids.length>4 || new Set(ids).size!==ids.length || ids.some(id=>!known.has(id))) throw new Error('Kanıt bağlantıları geçersiz.');
   return {...value,headline:value.headline.trim(),explanation:value.explanation.trim()};
+}
+
+export function validateProse(value, facts, modelFacts) {
+  if (!value || Object.keys(value).sort().join(',') !== 'cards,headline,summary') throw new Error('Geçersiz story biçimi.');
+  if (!Array.isArray(value.cards) || value.cards.length<5 || value.cards.length>7 ||
+      value.cards.some(c=>!c || typeof c!=='object') ||
+      JSON.stringify(value.cards.map(c=>c.type))!==JSON.stringify(facts.sections)) throw new Error('Story bölümleri eksik veya yanlış sırada.');
+  const check=(title,text,ids,tmin,tmax,pmin,pmax,checkTotals=true)=>{
+    if(typeof title!=='string'||title.trim().length<tmin||title.trim().length>tmax||
+       typeof text!=='string'||text.trim().length<pmin||text.trim().length>pmax) throw new Error('Story beklenen uzunlukta değil.');
+    validateShortProse({headline:title,explanation:text,evidence_ids:ids},facts,modelFacts,checkTotals);
+  };
+  const ids=[...new Set(value.cards.flatMap(c=>c.evidence_ids||[]))].slice(0,4);
+  check(value.headline,value.summary,ids,15,120,30,280);
+  for(const c of value.cards){
+    if(Object.keys(c).sort().join(',')!=='evidence_ids,text,title,type')throw new Error('Geçersiz kart biçimi.');
+    check(c.title,c.text,c.evidence_ids,8,90,80,650,false);
+    let sentenceText=c.text;
+    for(const name of [facts.home.name,facts.away.name,...(facts.events||[]).map(e=>e.player).filter(Boolean)]) sentenceText=sentenceText.split(name).join('Oyuncu');
+    const sentences=(sentenceText.match(/[.!?](?=\s|$)/gu)||[]).length;
+    if(sentences<2||sentences>4)throw new Error('Story kartları 2–4 cümle içermeli.');
+  }
+  return value;
 }

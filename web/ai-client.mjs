@@ -1,4 +1,5 @@
-export const ACTIVE = new Set(['queued','generating','reviewing','waiting_provider']);
+import {STORY_VERSION,PROMPT_VERSION} from './story-presentation.mjs';
+export const ACTIVE = new Set(['submitting','queued','generating','reviewing','waiting_provider']);
 
 export function progressText(job, now=Date.now()) {
   const elapsed=Math.max(0,Math.floor((now-job.started_at)/1000));
@@ -10,7 +11,7 @@ export function progressText(job, now=Date.now()) {
 }
 
 export async function analysisRequest(endpoint, id, method='GET', signal, fingerprint) {
-  const query=fingerprint?`?fingerprint=${encodeURIComponent(fingerprint)}`:'';
+  const query=`?story_version=${STORY_VERSION}&prompt_version=${PROMPT_VERSION}${fingerprint?'&fingerprint='+encodeURIComponent(fingerprint):''}`;
   const response=await fetch(`${endpoint.replace(/\/$/,'')}/analysis/${encodeURIComponent(id)}${query}`,{method,cache:'no-store',signal:AbortSignal.any([signal||new AbortController().signal,AbortSignal.timeout(20000)])});
   const result=await response.json();
   if (!response.ok && !result.status) throw new Error(result.error||'Analiz servisine ulaşılamadı.');

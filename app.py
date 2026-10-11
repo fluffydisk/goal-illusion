@@ -204,7 +204,10 @@ with st.container(border=True):
     st.caption("MAÇIN HİKÂYESİ · AI YORUMU" if narrative else "MAÇIN BULGULARI")
     if narrative:
         st.subheader(narrative["headline"])
-        st.write(narrative["explanation"])
+        st.write(narrative["summary"])
+        for card in narrative["cards"]:
+            with st.expander(card["title"]):
+                st.write(card["text"])
     else:
         st.subheader("Bu maçın AI yorumu henüz hazır değil.")
         use_groq = bool(os.getenv("GROQ_API_KEY"))
@@ -227,7 +230,7 @@ with st.container(border=True):
                     else "Yerel model deneyseldir; Ollama servisi gerekir."
                 )
     evidence_by_id = {e["id"]: e for e in facts["evidence"]}
-    selected_ids = narrative["evidence_ids"] if narrative else list(evidence_by_id)[:3]
+    selected_ids = list(dict.fromkeys(i for c in narrative["cards"] for i in c["evidence_ids"])) if narrative else list(evidence_by_id)[:3]
     for evidence_id in selected_ids:
         evidence = evidence_by_id[evidence_id]
         st.markdown(f"**{evidence['label']}**")

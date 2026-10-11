@@ -19,18 +19,21 @@
 <div id="analysis" hidden>
 <section id="story" class="story" aria-label="Maçın hikâyesi" aria-live="polite">
 <span class="eyebrow" id="story-label">MAÇIN HİKÂYESİ</span>
+<p id="story-match" class="story-match"></p><div class="cover-number" aria-hidden="true">90<span>DAKİKANIN ÖTESİ</span></div>
 <h2 id="story-headline">Maçın şut verilerini keşfet.</h2>
 <p id="story-explanation"></p>
+<button id="open-story" type="button" hidden>Maçın hikâyesini aç ↗</button>
 <div id="ai-controls" hidden>
-<button id="generate-ai" type="button">AI analizi üret</button>
+<button id="generate-ai" type="button">AI Review oluştur</button>
 <div id="ai-progress" class="ai-progress" hidden role="status" aria-live="polite">
 <div class="ai-stage"><span class="ai-spinner" aria-hidden="true"></span><strong id="ai-phase"></strong></div>
 <p id="ai-elapsed"></p><p id="ai-estimate" class="muted"></p>
-<ol class="ai-steps"><li data-stage="queued">Sıra</li><li data-stage="generating">Yorum</li><li data-stage="reviewing">Doğruluk kontrolü</li></ol>
+<ol class="ai-steps"><li data-stage="queued">Sıra</li><li data-stage="generating">Hikâye</li><li data-stage="reviewing">Doğruluk kontrolü</li><li data-stage="ready">Hazır</li></ol>
 </div>
+<div id="waiting-facts" hidden><span class="eyebrow">VERİ NOTU · AI YORUMU DEĞİLDİR</span><p id="waiting-fact"></p><button id="next-fact" type="button">Başka bir bulgu →</button></div>
 <p id="ai-message" class="muted"></p>
 </div>
-<div id="story-evidence" class="evidence-grid"></div>
+<div class="story-chapters"><span>01 / Maçın akışı</span><span>02 / Önemli fırsatlar</span><span>03 / AI değerlendirmesi</span></div>
 <p class="story-note" id="story-note"></p>
 <a href="#metrics">Detaylı analize geç ↓</a>
 </section>
@@ -45,5 +48,5 @@
 <details class="panel"><summary>Nasıl hesaplanıyor?</summary><p>Her şutun xG değerini gol olma olasılığı sayıyoruz. Bağımsız Bernoulli denemelerinden takım başına Poisson-binomial dağılımı; iki dağılımın dış çarpımından olası skorlar hesaplanır. Rastgele simülasyon kullanılmaz.</p><p>Bu analiz gerçekleşmiş şutlara koşulludur; maç öncesi tahmin veya kesin bir “hak edilen skor” değildir. Ribaundlar, pozisyon bağımlılığı ve skorla değişen taktikler modelde yoktur. Tek bir skorun düşük olasılığı tek başına şans ölçüsü değildir. Seri penaltılar hariçtir; kendi kalesine goller sabit katkı olarak eklenir.</p></details>
 <footer><p id="source"></p><img id="statsbomb" src="statsbomb-logo.png" alt="StatsBomb" width="130" hidden><p id="updated"></p><p>Güncel sezon maçları düzenli veri güncellemeleriyle eklenir. Kaynakta eksik xG bulunan maçlar analiz edilmez. FotMob ve StatsBomb ile resmi bağlantımız yoktur.</p><a id="repo" hidden>GitHub’da projeyi incele ↗</a></footer>
 </div>
-</main><script type="module" src="app.mjs?v=20261011-plain1"></script>
+</main><script type="module" src="app.mjs?v=story2"></script>
 </body></html>

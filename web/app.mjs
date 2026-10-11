@@ -1,7 +1,9 @@
 import {analyze} from './math.mjs';
-import {ACTIVE, progressText, analysisRequest} from './ai-client.mjs?v=sync1';
+import {ACTIVE, progressText, analysisRequest} from './ai-client.mjs?v=story2';
 import {loadAnalysisBundle, consistentAnalysis} from './analysis-data.mjs';
-import {statisticalTitle} from './story-presentation.mjs';
+import {readyStory} from './story-presentation.mjs';
+import {matchColors} from './team-colors.mjs';
+import {createStoryViewer} from './story-viewer.mjs';
 const $ = id => document.getElementById(id);
 const pct = n => new Intl.NumberFormat('tr-TR',{style:'percent',maximumFractionDigits:1}).format(n);
 const dec = n => n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -12,6 +14,10 @@ function graphic(container,viewBox,label) {const svg=svgNode('svg',{viewBox,role
 let snapshot, available, stories, aiEndpoint='';
 const dynamicStories=new Map(), jobs=new Map();
 let selectedId, pollTimer, clockTimer, activeRequest;
+const viewer=createStoryViewer();
+let waitingIndex=0;
+$('open-story').onclick=()=>{const d=available.find(d=>String(d.match.id)===selectedId);if(d&&hasStory(d))viewer.open(storyFor(d),d);};
+$('next-fact').onclick=()=>{waitingIndex++;const d=available.find(d=>String(d.match.id)===selectedId);if(d)jobWidget(d);};
 function stopPolling() {clearTimeout(pollTimer);clearInterval(clockTimer);activeRequest?.abort();}
 function jobWidget(d) {
   const id=String(d.match.id), job=jobs.get(id), ready=hasStory(d);
@@ -19,17 +25,24 @@ function jobWidget(d) {
   $('ai-progress').hidden=!job||!ACTIVE.has(job.status);
   $('generate-ai').hidden=!!job&&ACTIVE.has(job.status);
   $('generate-ai').disabled=!aiEndpoint;
-  $('generate-ai').textContent=job&&['failed','rate_limited'].includes(job.status)?'Yeniden dene':'AI analizi üret';
-  $('ai-message').textContent=!aiEndpoint?'İstek üzerine analiz servisi henüz bağlanmadı.':job?.error||'Güçlü model maça özgü yorum yazar; ayrı bir model çağrısı doğruluğunu kontrol eder.';
+  $('generate-ai').textContent=job&&['failed','rate_limited'].includes(job.status)?'Yeniden dene':'AI Review oluştur';
+  $('ai-message').textContent=!aiEndpoint?'İstek üzerine analiz servisi henüz bağlanmadı.':job?.error||'Maçın akışı, önemli fırsatlar ve AI değerlendirmesi. Bir kez oluşturulur, yeniden okunabilir.';
   if(job?.retry_at>Date.now()&&!ACTIVE.has(job.status))$('ai-message').textContent+=' En erken yeniden deneme: '+new Date(job.retry_at).toLocaleString('tr-TR')+'.';
   $('ai-phase').textContent=job?.phase||'';
+  $('waiting-facts').hidden=!job||!ACTIVE.has(job.status);
+  const notes=(storyFor(d)?.facts?.evidence||[]).filter(e=>!e.id.startsWith('shot_'));
+  $('waiting-fact').textContent=notes.length?notes[waitingIndex%notes.length].text:'';
   function tick() {
     if (!job||!ACTIVE.has(job.status)) return;
     const text=progressText(job);$('ai-elapsed').textContent=text.elapsed;$('ai-estimate').textContent=text.remaining;
   }
   clearInterval(clockTimer);tick();
   if (job&&ACTIVE.has(job.status)) clockTimer=setInterval(tick,1000);
-  for (const step of document.querySelectorAll('.ai-steps li')) step.classList.toggle('current',step.dataset.stage===(job?.resume_status||job?.status));
+  const stages=['queued','generating','reviewing','ready'], current=stages.indexOf(job?.resume_status||job?.status);
+  for (const step of document.querySelectorAll('.ai-steps li')) {
+    step.classList.toggle('current',step.dataset.stage===stages[current]);
+    step.classList.toggle('completed',stages.indexOf(step.dataset.stage)<current);
+  }
 }
 async function refreshJob(d,method='GET') {
   if (!aiEndpoint || hasStory(d)) return;
@@ -53,7 +66,11 @@ async function refreshJob(d,method='GET') {
     if(selectedId!==id||activeRequest!==controller)return;
     d=data.record;
     jobs.set(id,result);
-    if (result.status==='ready' && result.narrative) dynamicStories.set(id,{...storyFor(d),status:'ready',narrative:result.narrative});
+    if (result.status==='ready') {
+      const fresh={...storyFor(d),status:'ready',narrative:result.narrative};
+      if(!readyStory(fresh))throw new Error('AI Review servisi güncelleniyor. Yeni hikâye henüz kullanılamıyor.');
+      dynamicStories.set(id,fresh);
+    }
     const m=d.match,home=d.shots.filter(s=>s.team_id===m.home_id),away=d.shots.filter(s=>s.team_id===m.away_id);
     renderStory(d,analyze(home.map(s=>s.xg),away.map(s=>s.xg),d.home_fixed,d.away_fixed),[home,away].map(ss=>ss.reduce((n,s)=>n+s.xg,0)));
     if(result.status==='ready'){renderCoverage();const option=[...$('match').options].find(o=>o.value===id);if(option&&!option.text.endsWith('AI ✓'))option.text+=' · AI ✓';}
@@ -61,38 +78,41 @@ async function refreshJob(d,method='GET') {
   } catch(error) {
     if (controller.signal.aborted||error.name==='AbortError'||selectedId!==id||activeRequest!==controller) return;
     clearInterval(clockTimer);
+    jobs.set(id,{status:'failed',error:error.message});
+    jobWidget(d);
     $('ai-message').textContent=error.message+' Yeniden deneyebilirsin.';
     $('generate-ai').hidden=false;$('generate-ai').disabled=false;
     $('ai-progress').hidden=true;
   }
 }
 $('generate-ai').addEventListener('click',()=>{
-  const d=available.find(d=>String(d.match.id)===$('match').value);if(!d)return;
-  $('generate-ai').disabled=true;$('ai-message').textContent='İstek gönderiliyor…';
+  const d=available.find(d=>String(d.match.id)===$('match').value);if(!d||$('generate-ai').disabled||ACTIVE.has(jobs.get(String(d.match.id))?.status))return;
+  jobs.set(String(d.match.id),{status:'submitting',phase:'İstek gönderiliyor…',started_at:Date.now(),updated_at:Date.now()});
+  jobWidget(d);
+  $('generate-ai').disabled=true;
   clearTimeout(pollTimer);refreshJob(d,'POST');
 });
 function storyFor(d) {return dynamicStories.get(String(d.match.id))||stories?.stories?.[d.match.id];}
-function hasStory(d) {const s=storyFor(d);return s?.status==='ready'&&s.narrative?.fingerprint===s.facts?.fingerprint;}
+function hasStory(d) {return readyStory(storyFor(d));}
 function renderStory(d, a, sums) {
   const item=storyFor(d);
-  const facts=item?.facts, prose=item?.status==='ready'?item.narrative:null;
-  const valid=prose&&facts&&prose.fingerprint===facts.fingerprint&&
-    typeof prose.headline==='string'&&typeof prose.explanation==='string'&&
-    Array.isArray(prose.evidence_ids)&&prose.evidence_ids.length>=2&&
-    prose.evidence_ids.every(id=>facts.evidence.some(e=>e.id===id));
-  $('story-label').textContent=valid?'MAÇIN ANALİZİ · AI YORUMU':'MAÇIN BULGULARI';
-  $('story-headline').textContent=statisticalTitle(d);
-  $('story-explanation').textContent=valid?prose.explanation:'Şut verileri hazır. Maça özgü AI yorumunu aşağıdaki butonla üretebilirsin.';
+  const facts=item?.facts, valid=hasStory(d), prose=valid?item.narrative:null;
+  const [homeAccent,awayAccent]=matchColors(d.match);
+  $('story').style.setProperty('--home-accent',homeAccent);
+  $('story').style.setProperty('--away-accent',awayAccent);
+  $('story-label').textContent='AI REVIEW · MAÇIN HİKÂYESİ';
+  $('story-match').textContent=`${d.match.home} ${d.home_score}–${d.away_score} ${d.match.away}`;
+  $('story-headline').textContent=valid?prose.headline:'Son düdükten sonra, maçın hikâyesi.';
+  $('story-explanation').textContent=valid?prose.summary:'Fırsatlar nasıl gelişti? Hangi pozisyonlar öne çıktı? Skor bize ne anlatıyor? Maçı bölüm bölüm keşfet.';
+  $('open-story').hidden=!valid;
   jobWidget(d);
   const evidence=facts?.evidence||[
     {id:'chances',label:'Üretilen fırsatların kalitesi',text:`${d.match.home}: ${dec(sums[0])} xG · ${d.match.away}: ${dec(sums[1])} xG.`},
     {id:'outcomes',label:'Aynı şutlarla olası sonuçlar',text:`${d.match.home} galibiyeti ${pct(a.win)}, beraberlik ${pct(a.draw)}, ${d.match.away} galibiyeti ${pct(a.loss)}.`}
   ];
-  const selected=valid?prose.evidence_ids.map(id=>evidence.find(e=>e.id===id)).filter(Boolean):evidence.slice(0,3);
-  $('story-evidence').replaceChildren(...selected.map(e=>{const box=el('article','','evidence');box.append(el('h3',e.label),el('p',e.text));return box;}));
   $('all-evidence').replaceChildren(...evidence.map(e=>{const box=el('article','','evidence');box.append(el('h3',e.label),el('p',e.text));return box;}));
-  $('story-note').textContent=valid?'AI yorumu, aşağıdaki şut verilerine dayanır. Sayısal kanıtlar doğrudan hesaplanır; analiz tüm oyun performansını ölçmez.':'Şutlara dayalı analiz, tüm oyun performansını ölçmez.';
-  $('insight').textContent=valid?prose.explanation:'Bu dağılım gerçekleşmiş şutlara koşulludur; maç öncesi tahmin veya kesin bir hak edilen skor değildir.';
+  $('story-note').textContent=valid?'Veriye dayalı AI hikâyesi · Her bölümde ilgili kanıtları inceleyebilirsin.':'Şutlara dayalı analiz, tüm oyun performansını ölçmez.';
+  $('insight').textContent=valid?prose.summary:'Bu dağılım gerçekleşmiş şutlara koşulludur; maç öncesi tahmin veya kesin bir hak edilen skor değildir.';
 }
 function renderCoverage(){$('status').textContent=`${available.length} maç · ${available.filter(hasStory).length} AI yorumu hazır · ${snapshot.issues.length?`${snapshot.issues.length} maç/kaynak verisi güncellemede alınamadı; mevcut doğrulanmış maçlar gösteriliyor.`:'Tamamlanmış ve şut bazlı xG bulunan maçlar.'}`;}
 function selectLeague() {
@@ -103,7 +123,7 @@ function selectLeague() {
 function render(loadJob=true) {
   const d=available.find(d=>String(d.match.id)===$('match').value); if(!d)return;
   const changed=selectedId!==String(d.match.id);
-  if(changed)stopPolling(); selectedId=String(d.match.id);
+  if(changed){stopPolling();viewer.close();waitingIndex=0;} selectedId=String(d.match.id);
   const m=d.match, home=d.shots.filter(s=>s.team_id===m.home_id), away=d.shots.filter(s=>s.team_id===m.away_id);
   const a=analyze(home.map(s=>s.xg),away.map(s=>s.xg),d.home_fixed,d.away_fixed);
   const sums=[home,away].map(shots=>shots.reduce((total,s)=>total+s.xg,0));

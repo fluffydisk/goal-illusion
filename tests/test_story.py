@@ -11,7 +11,7 @@ from goal_illusion.narrative import (
     prompt_facts,
     validate_narrative,
 )
-from goal_illusion.story import build_evidence, fingerprint
+from goal_illusion.story import STORY_VERSION, build_evidence, fingerprint
 from scripts.generate_stories import generate
 
 
@@ -35,12 +35,15 @@ def facts():
 
 
 @pytest.fixture
-def prose():
+def prose(facts):
     return {
         "headline": "İngiltere'nin şut kalitesi galibiyetin arkasındaki güçlü dayanağı gösteriyor.",
-        "explanation": "Fırsatların kalitesi İngiltere lehine bir tablo çiziyor. "
+        "summary": "Fırsatların kalitesi İngiltere lehine bir tablo çiziyor. "
         "Skorun farkını değerlendirirken şutların dağılımı da dikkate alınmalı.",
-        "evidence_ids": ["chances", "outcomes", "margin"],
+        "cards": [{"type": section, "title": "Maçın fırsat dağılımı",
+                   "text": "İki takımın toplam gol beklentileri birbirine yakın kaldı. "
+                           "Gerçek skor ise aynı şutlarla oluşabilecek sonuçlardan yalnızca biri.",
+                   "evidence_ids": ["chances", "outcomes"]} for section in facts["sections"]],
     }
 
 
@@ -147,7 +150,7 @@ def test_only_verified_score_numbers_are_allowed(facts, prose):
 def test_unknown_or_duplicate_evidence_rejected(facts, prose):
     for ids in (["chances", "unknown"], ["chances", "chances"]):
         with pytest.raises(DataError):
-            validate_narrative({**prose, "evidence_ids": ids}, facts)
+            validate_narrative({**prose, "cards": [{**prose["cards"][0], "evidence_ids": ids}, *prose["cards"][1:]]}, facts)
 
 
 def test_equal_score_cannot_be_described_as_fewer_goals(facts, prose):
@@ -168,13 +171,13 @@ def test_equal_score_allows_more_goal_opportunities(facts, prose):
 def test_grounded_numeric_statistics_are_allowed(facts, prose):
     value = {
         **prose,
-        "explanation": f"England toplam {facts['home']['xg']:.2f} xG üretti; "
+        "summary": f"England toplam {facts['home']['xg']:.2f} xG üretti; "
         f"Senegal toplam {facts['away']['xg']:.2f} xG ile daha düşük kaldı.",
     }
-    assert validate_narrative(value, facts)["explanation"] == value["explanation"]
+    assert validate_narrative(value, facts)["summary"] == value["summary"]
     with pytest.raises(DataError, match="Veride bulunmayan sayı"):
         validate_narrative(
-            {**value, "explanation": "England toplam 9999.99 xG ile öne çıktı."}, facts
+            {**value, "summary": "England toplam 9999.99 xG ile öne çıktı."}, facts
         )
 
 
@@ -190,7 +193,7 @@ def test_cached_prose_requires_current_input(facts, prose):
     cached = {
         **prose,
         "fingerprint": facts["fingerprint"],
-        "story_version": 1,
+        "story_version": STORY_VERSION,
         "prompt_version": PROMPT_VERSION,
     }
     assert narrative_matches(cached, facts)
@@ -366,7 +369,7 @@ def test_pipeline_preserves_valid_and_drops_stale(monkeypatch, tmp_path, prose):
     cached = {
         **prose,
         "fingerprint": facts["fingerprint"],
-        "story_version": 1,
+        "story_version": STORY_VERSION,
         "prompt_version": PROMPT_VERSION,
         "model": "qwen3.5:4b",
     }
@@ -460,7 +463,7 @@ def test_reviewed_seed_requires_matching_data_and_keeps_honest_provenance(
                     str(data.match.id): {
                         **prose,
                         "fingerprint": facts["fingerprint"],
-                        "story_version": 1,
+                        "story_version": STORY_VERSION,
                         "prompt_version": PROMPT_VERSION,
                         "provider": "assistant",
                         "model": "Codex",
@@ -487,3 +490,56 @@ def test_reviewed_seed_requires_matching_data_and_keeps_honest_provenance(
     result = generate(source, dest, base_url="http://local", provider="groq", seed_path=seed)
     assert result["stories"][str(data.match.id)]["narrative"] is None
     assert calls == [1]
+
+
+def test_story_events_are_chronological_and_bind_player_team_minute(facts):
+    events = facts["events"]
+    assert [e["elapsed_minutes"] for e in events] == sorted(e["elapsed_minutes"] for e in events)
+    assert len({e["id"] for e in events}) == len(events)
+    shots = sorted(load_example().shots, key=lambda s: (s.elapsed_minutes, s.period))
+    for event, shot in zip(events, shots, strict=True):
+        assert event["player"] == shot.player
+        assert event["minute"] == shot.minute
+        assert event["added_minutes"] == shot.added_minutes
+        assert event["goal"] == (shot.outcome == "Goal")
+        assert event["team"] == (facts["home"]["name"] if shot.team_id == load_example().match.home_id else facts["away"]["name"])
+        assert event["id"] in {e["id"] for e in facts["evidence"]}
+
+
+def test_sparse_and_extra_time_story_sections():
+    data = load_example()
+    sparse = build_evidence(replace(data, shots=(), home_score=0, away_score=0))
+    assert sparse["sections"] == ["opening", "match_flow", "chances", "verdict", "closing"]
+    assert sparse["events"] == []
+    extended = build_evidence(replace(data, duration=120))
+    assert len(extended["sections"]) == 7
+    assert extended["sections"][3] == "extra_time"
+
+
+def test_missing_player_and_coordinates_do_not_invent_an_event():
+    data = load_example()
+    shot = replace(data.shots[0], player="", x=None, y=None)
+    facts = build_evidence(replace(data, shots=(shot,)))
+    assert facts["events"][0]["player"] is None
+    assert "Oyuncu bilgisi yok" in facts["evidence"][-1]["text"]
+
+
+@pytest.mark.parametrize("mutation", ["legacy", "order", "short", "unknown", "duplicates", "missing"])
+def test_story_contract_rejects_invalid_cards(facts, prose, mutation):
+    from copy import deepcopy
+
+    value = deepcopy(prose)
+    if mutation == "legacy":
+        value = {"headline": prose["headline"], "explanation": prose["summary"], "evidence_ids": ["chances"]}
+    elif mutation == "order":
+        value["cards"].reverse()
+    elif mutation == "short":
+        value["cards"][0]["text"] = "Çok kısa."
+    elif mutation == "unknown":
+        value["cards"][0]["evidence_ids"] = ["shot_unknown"]
+    elif mutation == "duplicates":
+        value["cards"][0]["evidence_ids"] = ["chances", "chances"]
+    else:
+        del value["cards"][0]["text"]
+    with pytest.raises(DataError):
+        validate_narrative(value, facts)

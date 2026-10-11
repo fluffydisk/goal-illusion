@@ -58,3 +58,22 @@ secret bağlandıktan sonra yorum bulunmayan bir maça tıklanarak yapılır.
 `GET /health` yalnızca sunucu anahtarının bağlanıp bağlanmadığını bildirir; anahtar değeri döndürülmez.
 Manuel `Check on-demand AI quality` GitHub işi, Worker’ın gerçek Groq çağrılarını
 test eder. Üretilen deneme metni siteye veya ortak analiz önbelleğine yayımlanmaz.
+
+## Story v2 geçişi
+
+Yanıtın `narrative` alanı artık `headline`, `summary`, `cards` ve kaynak/sürüm
+metadatası içerir. Kart alanları `type`, `title`, `text`, `evidence_ids` şeklindedir.
+Bölüm sırası kanıt paketindeki `sections` alanından gelir. Zaman, oyuncu ve takım
+bağlantıları `events` ile; kendi kalesine goller ayrı sabit katkı olarak iletilir.
+
+Önce `scripts/export_ai_contract.py`, `scripts/generate_stories.py --provider groq
+--evidence-only` ve `scripts/build_analysis_bundle.py` ile paketleri hazırlayın.
+Pages ve Worker birlikte yayımlanmalıdır. Geçiş sırasında sürümler uyuşmazsa API
+üretim kotası harcamadan geçici güncelleme hatası döndürür. Eski işler ve kısa
+metinler yeni hikâye gibi sunulmaz; eski arşiv topluca yeniden üretilmez.
+
+Tek çağrıda bütün hikâye, ayrı çağrıda bütün kartların editör kontrolü yapılır.
+Token sınırı uzun hikâyeler için 8192'dir; sağlayıcı kotası ve süre sınırları geçerlidir.
+Üç gerçek örnek için `GROQ_API_KEY` güvenli ortamda tanımlıyken kök dizinde
+`node scripts/check_ai_service.mjs` çalıştırın. İsteğe bağlı `MATCH_IDS` en fazla
+üç virgülle ayrılmış kimlik alır. Bu kontrol yayımlanmış önbelleği değiştirmez.

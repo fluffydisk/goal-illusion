@@ -133,11 +133,14 @@ def test_local_story_generation_renders_original_headline(monkeypatch):
     def fake_generate(facts, **kwargs):
         return {
             "headline": "Tabeladaki farkın arkasında İngiltere'nin daha kaliteli fırsatları var.",
-            "explanation": "İngiltere'nin ürettiği fırsatlar galibiyeti destekliyor. "
+            "summary": "İngiltere'nin ürettiği fırsatlar galibiyeti destekliyor. "
             "Gol farkı, şutların alternatif sonuçlarıyla birlikte değerlendirilmelidir.",
-            "evidence_ids": ["chances", "outcomes"],
+            "cards": [{"type": section, "title": "Maçın fırsat dağılımı",
+                           "text": "İki takımın toplam gol beklentileri birbirine yakın kaldı. "
+                           "Gerçek skor ise aynı şutlarla oluşabilecek sonuçlardan yalnızca biri.",
+                           "evidence_ids": ["chances", "outcomes"]} for section in facts["sections"]],
             "fingerprint": facts["fingerprint"],
-            "story_version": 1,
+            "story_version": 2,
             "prompt_version": PROMPT_VERSION,
         }
 
