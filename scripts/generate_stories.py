@@ -55,7 +55,11 @@ def generate(
         old = previous.get("stories", {}).get(key, {})
         cached = old.get("narrative")
         same_input = old.get("facts", {}).get("fingerprint") == facts["fingerprint"]
-        failures = old.get("failed_attempts", 0) if same_input else 0
+        failures = (
+            old.get("failed_attempts", 0)
+            if same_input and old.get("validation_revision") == 2
+            else 0
+        )
         valid = (
             narrative_matches(cached, facts)
             and cached.get("model") == model
@@ -66,6 +70,7 @@ def generate(
             "narrative": cached if valid else None,
             "status": "ready" if valid else "pending",
             "failed_attempts": failures,
+            "validation_revision": 2,
         }
         if not valid:
             pending.append((-failures, record["match"]["date"], key))
@@ -85,9 +90,35 @@ def generate(
             except DataError as error:
                 story["status"] = "unavailable"
                 story["failed_attempts"] += 1
+                story["failure_reason"] = str(error)
                 print(f"{key}: {error}", file=sys.stderr, flush=True)
             checkpoint()
     ready = sum(s["status"] == "ready" for s in result["stories"].values())
+    attempted = (
+        min(len(pending), limit if limit is not None else len(pending)) if not evidence_only else 0
+    )
+    created = sum(s["status"] == "ready" for s in result["stories"].values()) - (
+        len(records) - len(pending)
+    )
+    result["generation"] = {
+        "attempted": attempted,
+        "created": created,
+        "ready": ready,
+        "total": len(records),
+        "failed": attempted - created,
+    }
+    checkpoint()
+    if attempted and not created:
+        print(
+            "::warning::AI generation produced no new stories; inspect rejection reasons.",
+            flush=True,
+        )
+    if summary := os.getenv("GITHUB_STEP_SUMMARY"):
+        with open(summary, "a") as output:
+            output.write(
+                f"\nAI stories: **{ready}/{len(records)}**. "
+                f"Attempted: {attempted}; new: {created}; rejected: {attempted - created}.\n"
+            )
     print(f"Stories: {ready}/{len(records)} AI narratives; all matches have evidence.", flush=True)
     return result
 

@@ -144,6 +144,26 @@ def test_equal_score_cannot_be_described_as_fewer_goals(facts, prose):
         )
 
 
+def test_equal_score_allows_more_goal_opportunities(facts, prose):
+    facts = {**facts, "home": {**facts["home"], "goals": 2}, "away": {**facts["away"], "goals": 2}}
+    for noun in ("gol fırsatı", "gol beklentisi"):
+        text = f"İngiltere daha fazla {noun} üretse de maç beraberlikle bitti."
+        assert validate_narrative({**prose, "headline": text}, facts)["headline"] == text
+
+
+def test_grounded_numeric_statistics_are_allowed(facts, prose):
+    value = {
+        **prose,
+        "explanation": f"England toplam {facts['home']['xg']:.2f} xG üretti; "
+        f"Senegal toplam {facts['away']['xg']:.2f} xG ile daha düşük kaldı.",
+    }
+    assert validate_narrative(value, facts)["explanation"] == value["explanation"]
+    with pytest.raises(DataError, match="Veride bulunmayan sayı"):
+        validate_narrative(
+            {**value, "explanation": "England toplam 9999.99 xG ile öne çıktı."}, facts
+        )
+
+
 def test_equal_shots_cannot_be_described_as_more_shots(facts, prose):
     facts = {**facts, "home": {**facts["home"], "shots": 8}, "away": {**facts["away"], "shots": 8}}
     with pytest.raises(DataError):
@@ -370,6 +390,7 @@ def test_failed_newest_story_does_not_starve_untested_matches(monkeypatch, tmp_p
                         "facts": build_evidence(newer),
                         "narrative": None,
                         "failed_attempts": 2,
+                        "validation_revision": 2,
                     }
                 }
             }
