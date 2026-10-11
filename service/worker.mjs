@@ -6,7 +6,9 @@ const phases={queued:'Sırada bekliyor',generating:'Maçın hikâyesi yazılıyo
 export function publicJob(job, position) {
   if (!job) return {status:'missing'};
   const {status,started_at,updated_at,narrative,fingerprint,error,retry_at,attempt,resume_status}=job;
-  return {status,phase:status==='queued'&&position?`${position}. sırada bekliyor`:phases[status],queue_position:position,eta_reference_at:status==='queued'&&position?Date.now():updated_at,started_at,updated_at,narrative,fingerprint,error,retry_at,attempt,resume_status,
+  const issue=job.last_failure||job.feedback||'';
+  const failure_code=status==='failed' ? (/tamamlanamadı/.test(issue)?'incomplete_output':/uzunluk/.test(issue)?'story_length':/cümle/.test(issue)?'sentence_count':/bölüm/.test(issue)?'section_order':/biçim/.test(issue)?'schema':/sayı/.test(issue)?'number':/iddia/.test(issue)?'unsupported_claim':/kanıt|Kanıt/.test(issue)?'evidence':/manşet/.test(issue)?'style':/HTTP/.test(issue)?'provider_http':/Anlam kontrolü/.test(issue)?'editor_rejected':'unknown') : undefined;
+  return {status,failure_code,phase:status==='queued'&&position?`${position}. sırada bekliyor`:phases[status],queue_position:position,eta_reference_at:status==='queued'&&position?Date.now():updated_at,started_at,updated_at,narrative,fingerprint,error,retry_at,attempt,resume_status,
     // No fabricated percentage/countdown: estimates stay an explicit range.
     estimated_seconds: status==='waiting_provider'?[Math.max(0,Math.ceil((retry_at-updated_at)/1000)),Math.max(0,Math.ceil((retry_at-updated_at)/1000))+60]:status==='queued'?[30+Math.max(0,(position||1)-1)*90,180+Math.max(0,(position||1)-1)*180]:status==='reviewing'?[10,60]:[20,90]};
 }

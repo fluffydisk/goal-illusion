@@ -23,6 +23,7 @@ jobs:
           MATCH_IDS: ${{ inputs.match_id }}
         run: node scripts/check_ai_service.mjs
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ai-quality-check
           path: /tmp/ai-quality-check-*.json

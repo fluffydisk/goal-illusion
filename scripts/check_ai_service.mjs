@@ -16,6 +16,12 @@ const storage={
   async setAlarm(t){alarmAt=t;}
 };
 const queue=new AnalysisQueue({storage,blockConcurrencyWhile:fn=>fn()},{GROQ_API_KEY:process.env.GROQ_API_KEY});
+const complete=queue.complete.bind(queue);
+queue.complete=async(...args)=>{
+  const result=await complete(...args);
+  writeFileSync(`/tmp/ai-quality-check-${id}-${args[2]}.json`,JSON.stringify(result,null,2));
+  return result;
+};
 await storage.put('queue',['integration-check']);
 await storage.put('integration-check',{status:'queued',prompt_version:contract.prompt_version,fingerprint:item.facts.fingerprint,facts:item.facts,model_facts:item.model_facts,started_at:Date.now(),updated_at:Date.now(),attempt:0});
 for(let i=0;i<8;i++){
