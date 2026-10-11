@@ -114,6 +114,22 @@ def test_reject_unverifiable_claims(facts, prose, bad):
         validate_narrative({**prose, "headline": f"{bad} takımın skorunu açıkladı."}, facts)
 
 
+def test_outcome_probability_wording_is_not_a_luck_claim(facts, prose):
+    value = {
+        **prose,
+        "headline": "İngiltere'nin galibiyet şansı, şut kalitesindeki avantajını yansıtıyor.",
+    }
+    assert validate_narrative(value, facts)["headline"] == value["headline"]
+
+
+def test_only_verified_score_numbers_are_allowed(facts, prose):
+    correct = f"{facts['home']['goals']}–{facts['away']['goals']}"
+    text = f"İngiltere'nin {correct} galibiyeti, şut kalitesindeki üstünlüğünü yansıtıyor."
+    assert validate_narrative({**prose, "headline": text}, facts)["headline"] == text
+    with pytest.raises(DataError):
+        validate_narrative({**prose, "headline": text.replace(correct, "9–8")}, facts)
+
+
 def test_unknown_or_duplicate_evidence_rejected(facts, prose):
     for ids in (["chances", "unknown"], ["chances", "chances"]):
         with pytest.raises(DataError):
@@ -337,3 +353,36 @@ def test_pipeline_preserves_valid_and_drops_stale(monkeypatch, tmp_path, prose):
     assert story["status"] == "unavailable"
     assert story["narrative"] is None
     assert story["facts"]["home"]["goals"] == 4
+
+
+def test_failed_newest_story_does_not_starve_untested_matches(monkeypatch, tmp_path):
+    from dataclasses import asdict
+
+    data = load_example()
+    newer = replace(data, match=replace(data.match, id=999, date="2026-10-11"))
+    source, dest = tmp_path / "matches.json", tmp_path / "stories.json"
+    source.write_text(json.dumps({"updated_at": "now", "matches": [asdict(newer), asdict(data)]}))
+    dest.write_text(
+        json.dumps(
+            {
+                "stories": {
+                    "999": {
+                        "facts": build_evidence(newer),
+                        "narrative": None,
+                        "failed_attempts": 2,
+                    }
+                }
+            }
+        )
+    )
+    called = []
+
+    def failed(facts, **kwargs):
+        called.append(facts["match_id"])
+        raise DataError("Unavailable")
+
+    monkeypatch.setattr("scripts.generate_stories.generate_narrative", failed)
+    result = generate(source, dest, base_url="http://local", limit=1)
+    assert called == [data.match.id]
+    assert result["stories"]["999"]["failed_attempts"] == 2
+    assert result["stories"][str(data.match.id)]["failed_attempts"] == 1

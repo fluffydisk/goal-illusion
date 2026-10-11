@@ -32,9 +32,9 @@ daha yüksek toplam xG, daha kaliteli tekil şut anlamına gelmez. Küçük fark
 Veri gerçekleşen şutlara koşulludur, maç öncesi tahmin değildir. xG skorun nedeni değildir;
 'galibiyeti getirdi', 'skoru belirledi', 'kanıtladı', 'garanti etti' gibi nedensellik kurma.
 Şut kalitesi ve olası sonuçlarla sınırlı kal. Pres, savunma, kaleci, taktik, hakem,
-topa sahip olma, hak edilmiş sonuç veya şans hakkında çıkarım yapma.
-Kendi kalesine goller sabit katkıdır. Sayıları, gol sayısını ve skor rakamlarını metinde
-tekrarlama; bunlar ayrı kartlarda gösterilir. Takım adlarındaki rakamları aynen koru.
+topa sahip olma, hak edilmiş sonuç veya şanslılık hakkında çıkarım yapma.
+Kendi kalesine goller sabit katkıdır. Gerçek maç skorunu yazabilirsin; diğer sayısal
+değerleri metinde tekrarlama, bunlar ayrı kartlarda gösterilir. Takım adlarını aynen koru.
 headline: takım adını içeren, skoru fırsat dengesiyle ilişkilendiren tek cümle; en fazla
 180 karakter. explanation: yorumu açıklayan bir veya iki cümle; en fazla 350 karakter.
 Türkçe doğal anlatım kullan. JSON dışında çıktı üretme. HTML/Markdown kullanma.
@@ -107,6 +107,12 @@ def validate_narrative(value: dict, facts: dict) -> dict:
         stripped = text
         for team in (facts["home"]["name"], facts["away"]["name"]):
             stripped = stripped.replace(team, "")
+        # A verified final score is useful in a headline; other numeric claims stay in cards.
+        stripped = re.sub(
+            rf"(?<!\d){facts['home']['goals']}\s*[-–:]\s*{facts['away']['goals']}(?!\d)",
+            "",
+            stripped,
+        )
         if re.search(r"\d|[<>\n#*\[\]`]|https?://", stripped):
             raise DataError("Yorum doğrulanmamış sayı veya biçimlendirme içeriyor.")
         if claim := re.search(
@@ -285,7 +291,8 @@ def _review_groq(prose: dict, facts: dict, api_key: str, model: str) -> None:
             raise DataError("Anlam kontrolü tamamlanamadı.")
         review = json.loads(choice["message"]["content"])
         if review.get("approved") is not True:
-            raise DataError("Anlam kontrolü yorumu reddetti.")
+            reason = str(review.get("reason", "Yorum verilerle uyuşmuyor."))[:200]
+            raise DataError(f"Anlam kontrolü yorumu reddetti: {reason}")
         return
     raise DataError("Anlam kontrolüne ulaşılamadı.")
 

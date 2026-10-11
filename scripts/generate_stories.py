@@ -52,7 +52,10 @@ def generate(
     for record in records:
         facts = build_evidence(match_from_snapshot(record))
         key = str(facts["match_id"])
-        cached = previous.get("stories", {}).get(key, {}).get("narrative")
+        old = previous.get("stories", {}).get(key, {})
+        cached = old.get("narrative")
+        same_input = old.get("facts", {}).get("fingerprint") == facts["fingerprint"]
+        failures = old.get("failed_attempts", 0) if same_input else 0
         valid = (
             narrative_matches(cached, facts)
             and cached.get("model") == model
@@ -62,12 +65,13 @@ def generate(
             "facts": facts,
             "narrative": cached if valid else None,
             "status": "ready" if valid else "pending",
+            "failed_attempts": failures,
         }
         if not valid:
-            pending.append((record["match"]["date"], key))
+            pending.append((-failures, record["match"]["date"], key))
     checkpoint()
     if not evidence_only:
-        for index, (_, key) in enumerate(sorted(pending, reverse=True)[:limit]):
+        for index, (_, _, key) in enumerate(sorted(pending, reverse=True)[:limit]):
             if provider == "groq" and index:
                 time.sleep(20)  # Pace requests within the free token quota.
             story = result["stories"][key]
@@ -76,9 +80,11 @@ def generate(
                     story["facts"], base_url=base_url, model=model, provider=provider
                 )
                 story["status"] = "ready"
+                story["failed_attempts"] = 0
                 print(f"{key}: {story['narrative']['headline']}", flush=True)
             except DataError as error:
                 story["status"] = "unavailable"
+                story["failed_attempts"] += 1
                 print(f"{key}: {error}", file=sys.stderr, flush=True)
             checkpoint()
     ready = sum(s["status"] == "ready" for s in result["stories"].values())

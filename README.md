@@ -159,8 +159,8 @@ kazanma olasılığını hesaplar. Son ölçü tek bir tam skorun düşük olas�
 beraberlikte yönlü skor farkı ölçüsü verilmez. Sıfır şutta ortalama xG tanımsızdır.
 
 [Groq şemalı çıktı API’sinin](https://console.groq.com/docs/structured-outputs) strict JSON modu kullanılır.
-Modelden sayısız Türkçe metin ve kanıt kimlikleri alınır; sayılar uygulamanın hesabından
-gelir. Geçersiz kanıt bağlantıları, metindeki rakamlar/HTML ve belirli desteklenmeyen
+Modelden Türkçe başlık, kısa açıklama ve kanıt kimlikleri alınır; sayılar uygulamanın hesabından
+gelir. Geçersiz kanıt bağlantıları, doğrulanmış maç skoru dışındaki rakamlar/HTML ve belirli desteklenmeyen
 iddialar reddedilir; bir düzeltme denemesi yapılır. Groq üretiminde metin ayrıca ayrı
 bir editör çağrısıyla gerçek bulgulara karşı kontrol edilir. Takım karşılaştırması,
 desteklenmeyen nedensellik veya anlam sorunları saptanırsa yorum yayımlanmaz. Bu
@@ -196,7 +196,7 @@ Streamlit ekranında hazır yorum kullanılır. Yeni/eskiden yayımlanmayan maç
 adres seçilebilir. `--limit 3` yalnızca ilk üç eksik yorumu üretir; tüm maçların
 kanıtları yine yazılır. `--evidence-only` model çağrısı yapmaz.
 
-Actions her veri güncellemesinde en yeni maçlara öncelik vererek en fazla yirmi
+Actions her veri güncellemesinde henüz denenmemiş maçları en yeniden eskiye işleyerek en fazla yirmi
 eksik/değişmiş yorumu üretir; geçerli yorumları önbellekte tutar. Sonraki
 çalışmalar kalan maçlarla devam eder; analiz kapsamı daraltılmaz. Elle çalıştırmada
 `story_limit` artırılarak bütün eksik yorumlar tek çalışmada üretilebilir.
@@ -204,3 +204,6 @@ Groq çağrıları arasında kota için beklenir; sınırlama yanıtında bir te
 API erişimi başarısız olsa da kanıtlarla site yayımlanır. Her üretilen metin için ayrıca anlam kontrolü çağrısı yapılır. İlk gerçek API
 önizlemesinde ters takım karşılaştırması saptandığı için girdilere açık karşılaştırmalar
 eklendi; yanlış nedensellik ifadeleri de reddedilir.
+
+Reddedilen yorumlar yeniden denenebilir; başarısız deneme sayısı yüksek maçlar, hiç
+denenmemiş maçların önünü kesmemesi için kuyruğun gerisine alınır.
