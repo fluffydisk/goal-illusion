@@ -407,3 +407,23 @@ def test_failed_newest_story_does_not_starve_untested_matches(monkeypatch, tmp_p
     assert called == [data.match.id]
     assert result["stories"]["999"]["failed_attempts"] == 2
     assert result["stories"][str(data.match.id)]["failed_attempts"] == 1
+
+
+def test_quota_stops_batch_and_preserves_unattempted_matches(monkeypatch, tmp_path):
+    from dataclasses import asdict
+    from goal_illusion.narrative import NarrativeRateLimitError
+
+    data = load_example()
+    newer = replace(data, match=replace(data.match, id=999, date="2026-10-11"))
+    source, dest = tmp_path / "matches.json", tmp_path / "stories.json"
+    source.write_text(json.dumps({"updated_at": "now", "matches": [asdict(newer), asdict(data)]}))
+
+    def limited(*args, **kwargs):
+        raise NarrativeRateLimitError("Quota")
+
+    monkeypatch.setattr("scripts.generate_stories.generate_narrative", limited)
+    result = generate(source, dest, base_url="http://local", limit=20)
+    assert result["generation"]["attempted"] == 1
+    assert result["generation"]["rate_limited"] is True
+    assert result["stories"][str(data.match.id)]["status"] == "pending"
+    assert json.loads(dest.read_text())["generation"] == result["generation"]

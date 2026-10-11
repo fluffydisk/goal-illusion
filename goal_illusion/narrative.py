@@ -14,6 +14,12 @@ from goal_illusion.story import STORY_VERSION
 DEFAULT_MODEL = "qwen3.5:4b"
 GROQ_MODEL = "openai/gpt-oss-120b"
 PROMPT_VERSION = 7
+
+
+class NarrativeRateLimitError(DataError):
+    """The provider quota prevented generation; preserve progress and stop this batch."""
+
+
 OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
@@ -242,6 +248,10 @@ def generate_narrative(
             error_text = str(error) if isinstance(error, DataError) else "Geçersiz model yanıtı"
             if isinstance(error, requests.RequestException):
                 if error.response is not None:
+                    if error.response.status_code == 429:
+                        raise NarrativeRateLimitError(
+                            "AI sağlayıcısının ücretsiz kotası doldu."
+                        ) from None
                     error_text = f"API HTTP {error.response.status_code}"
                 break
     raise DataError(f"AI yorumu üretilemedi: {error_text or 'geçersiz yanıt'}.")

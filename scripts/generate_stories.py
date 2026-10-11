@@ -13,6 +13,7 @@ from goal_illusion.data import DataError  # noqa: E402
 from goal_illusion.narrative import (  # noqa: E402
     DEFAULT_MODEL,
     GROQ_MODEL,
+    NarrativeRateLimitError,
     generate_narrative,
     narrative_matches,
 )
@@ -75,11 +76,13 @@ def generate(
         if not valid:
             pending.append((-failures, record["match"]["date"], key))
     checkpoint()
+    processed, rate_limited = 0, False
     if not evidence_only:
         for index, (_, _, key) in enumerate(sorted(pending, reverse=True)[:limit]):
             if provider == "groq" and index:
                 time.sleep(20)  # Pace requests within the free token quota.
             story = result["stories"][key]
+            processed += 1
             try:
                 story["narrative"] = generate_narrative(
                     story["facts"], base_url=base_url, model=model, provider=provider
@@ -91,12 +94,13 @@ def generate(
                 story["status"] = "unavailable"
                 story["failed_attempts"] += 1
                 story["failure_reason"] = str(error)
+                rate_limited = isinstance(error, NarrativeRateLimitError)
                 print(f"{key}: {error}", file=sys.stderr, flush=True)
             checkpoint()
+            if rate_limited:
+                break
     ready = sum(s["status"] == "ready" for s in result["stories"].values())
-    attempted = (
-        min(len(pending), limit if limit is not None else len(pending)) if not evidence_only else 0
-    )
+    attempted = processed
     created = sum(s["status"] == "ready" for s in result["stories"].values()) - (
         len(records) - len(pending)
     )
@@ -106,6 +110,7 @@ def generate(
         "ready": ready,
         "total": len(records),
         "failed": attempted - created,
+        "rate_limited": rate_limited,
     }
     checkpoint()
     if attempted and not created:

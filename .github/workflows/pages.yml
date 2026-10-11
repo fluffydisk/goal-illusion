@@ -26,6 +26,7 @@ jobs:
     outputs:
       created: ${{ steps.coverage.outputs.created }}
       remaining: ${{ steps.coverage.outputs.remaining }}
+      rate_limited: ${{ steps.coverage.outputs.rate_limited }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -70,6 +71,7 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write(f"created={generation.get('created', 0)}\n")
               output.write(f"remaining={generation.get('total', 0) - generation.get('ready', 0)}\n")
+              output.write(f"rate_limited={str(generation.get('rate_limited', False)).lower()}\n")
           PY
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
@@ -91,7 +93,7 @@ jobs:
         uses: actions/deploy-pages@v4
   continue_backlog:
     needs: [build, deploy]
-    if: needs.build.outputs.created > 0 && needs.build.outputs.remaining > 0
+    if: needs.build.outputs.created > 0 && needs.build.outputs.remaining > 0 && needs.build.outputs.rate_limited != 'true'
     runs-on: ubuntu-latest
     permissions:
       actions: write
