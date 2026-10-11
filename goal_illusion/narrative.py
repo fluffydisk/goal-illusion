@@ -109,14 +109,14 @@ def validate_narrative(value: dict, facts: dict) -> dict:
             stripped = stripped.replace(team, "")
         if re.search(r"\d|[<>\n#*\[\]`]|https?://", stripped):
             raise DataError("Yorum doğrulanmamış sayı veya biçimlendirme içeriyor.")
-        if re.search(
-            r"şans|hak et|hakett|pres|kaleci|savunma|taktik|hakem|topa sahip|kesinlikle|"
+        if claim := re.search(
+            r"\bşans\b|şanslı|şanssız|hak et|hakett|pres|kaleci|savunma|taktik|hakem|topa sahip|kesinlikle|"
             r"luck|deserv|possession|goalkeeper|defen|dominat|baskın oyun|uzaklık|sonucu doğrula|"
-            r"şut başına gol oran|doğrula|garanti|öngör|sonucu belirledi|kesin galibiyet|"
-            r"galibiyeti getirdi|skoru belirledi|kanıtladı|haklı çıkar|domine|sağladı",
+            r"şut başına gol oran|garanti|öngör|sonucu belirledi|kesin galibiyet|"
+            r"galibiyeti getirdi|skoru belirledi|kanıtladı|haklı çıkar|domine",
             text.casefold(),
         ):
-            raise DataError("Yorum şut verisinden doğrulanamayan bir çıkarım içeriyor.")
+            raise DataError(f"Şut verisinden çıkarılamayan ifade: {claim.group(0)}")
         if facts["home"]["goals"] == facts["away"]["goals"] and re.search(
             r"daha (az|fazla|çok) gol", text.casefold()
         ):

@@ -161,9 +161,10 @@ beraberlikte yönlü skor farkı ölçüsü verilmez. Sıfır şutta ortalama xG
 [Groq şemalı çıktı API’sinin](https://console.groq.com/docs/structured-outputs) strict JSON modu kullanılır.
 Modelden sayısız Türkçe metin ve kanıt kimlikleri alınır; sayılar uygulamanın hesabından
 gelir. Geçersiz kanıt bağlantıları, metindeki rakamlar/HTML ve belirli desteklenmeyen
-iddialar reddedilir; bir düzeltme denemesi yapılır. Bunlar dil modelinin her yorumunun
-anlamsal olarak doğru olduğunu garanti etmez. Özellikle küçük modelin Türkçesi ve
-çıkarımları gözden geçirilmelidir. Yorumlar şut kalitesiyle sınırlıdır; tüm oyun kalitesi,
+iddialar reddedilir; bir düzeltme denemesi yapılır. Groq üretiminde metin ayrıca ayrı
+bir editör çağrısıyla gerçek bulgulara karşı kontrol edilir. Takım karşılaştırması,
+desteklenmeyen nedensellik veya anlam sorunları saptanırsa yorum yayımlanmaz. Bu
+kontroller dil modelinin her yorumunun anlamsal olarak doğru olduğunu garanti etmez. Yorumlar şut kalitesiyle sınırlıdır; tüm oyun kalitesi,
 pres, topa sahip olma veya kesin hak edilen sonuç iddiası değildir.
 
 Maç verisi değişirse SHA-256 parmak izi eski yorumu geçersiz kılar; eski veriye ait
@@ -200,5 +201,6 @@ eksik/değişmiş yorumu üretir; geçerli yorumları önbellekte tutar. Sonraki
 çalışmalar kalan maçlarla devam eder; analiz kapsamı daraltılmaz. Elle çalıştırmada
 `story_limit` artırılarak bütün eksik yorumlar tek çalışmada üretilebilir.
 Groq çağrıları arasında kota için beklenir; sınırlama yanıtında bir tekrar denemesi yapılır.
-API erişimi başarısız olsa da kanıtlarla site yayımlanır. Üretilen metinlerin gerçek maçlar
-üzerinde anlamsal kalite kontrolü, API anahtarı eklendikten sonra tamamlanmalıdır.
+API erişimi başarısız olsa da kanıtlarla site yayımlanır. Her üretilen metin için ayrıca anlam kontrolü çağrısı yapılır. İlk gerçek API
+önizlemesinde ters takım karşılaştırması saptandığı için girdilere açık karşılaştırmalar
+eklendi; yanlış nedensellik ifadeleri de reddedilir.

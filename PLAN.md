@@ -76,9 +76,10 @@ aşağı kaydırınca bu yorumu destekleyen bulgulara ve ayrıntılı grafiklere
    çalışmada yirmi eksik yorum üretilir; sonraki çalışmalar kalan maçlarla devam eder.
    Nihai kapsam bütün doğrulanmış maçlardır. Ziyaretçiler model çalıştırmaz.
 5. **Doğrulama:** yapı, kanıt, sayı/HTML ve belirli desteklenmeyen iddia kontrolleri;
-   eski yorumları parmak iziyle geçersiz kılma. Model yokken yorum uydurulmaz.
+   eski yorumları parmak iziyle geçersiz kılma; ayrı model çağrısıyla anlam kontrolü.
+   Model yokken yorum uydurulmaz.
 
 Küçük yerel modeller gerçek maç denemelerinde yeterli kaliteyi sağlayamadı. Groq
-bağlantısı eklendi; gerçek API çıktılarının dil/anlam kontrolü anahtar eklendikten
-sonra tamamlanacak. Dilin/anlamın kusursuzluğu otomatik kontrollerle garanti edilemez. Şut verisinden tüm oyunun kalitesi
+bağlantısı eklendi ve gerçek API çıktıları denendi. Ters takım karşılaştırması ve
+nedensellik hataları nedeniyle açık sayısal ilişkiler ve ayrı anlam kontrolü eklendi. Dilin/anlamın kusursuzluğu otomatik kontrollerle garanti edilemez. Şut verisinden tüm oyunun kalitesi
 çıkarılamaz; daha kapsamlı futbol yorumu için yeni veri sinyalleri gerekir.
