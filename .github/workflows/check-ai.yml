@@ -1,0 +1,28 @@
+name: Check on-demand AI quality
+on:
+  workflow_dispatch:
+    inputs:
+      match_id:
+        description: Match to use for a private integration test (does not publish)
+        default: '5904761'
+        required: true
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Generate and independently review one test narrative
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          MATCH_ID: ${{ inputs.match_id }}
+        run: node scripts/check_ai_service.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-quality-check
+          path: /tmp/ai-quality-check.json
