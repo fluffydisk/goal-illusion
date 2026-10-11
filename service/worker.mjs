@@ -18,7 +18,7 @@ export default {
     if (origin!==env.SITE_ORIGIN) return json({error:'Bu istek kaynağına izin verilmiyor.'},403);
     const cors={'Access-Control-Allow-Origin':env.SITE_ORIGIN,'Vary':'Origin','Cache-Control':'no-store'};
     if (request.method==='OPTIONS') return new Response(null,{status:204,headers:{...cors,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type'}});
-    if(request.method==='GET'&&new URL(request.url).pathname==='/health')return new Response(JSON.stringify({configured:Boolean(env.GROQ_API_KEY),model:contract.model}),{headers:{...cors,'Content-Type':'application/json'}});
+    if(request.method==='GET'&&new URL(request.url).pathname==='/health')return new Response(JSON.stringify({configured:Boolean(env.GROQ_API_KEY),model:contract.model,story_version:contract.story_version,prompt_version:contract.prompt_version}),{headers:{...cors,'Content-Type':'application/json'}});
     const url=new URL(request.url), match=url.pathname.match(/^\/analysis\/(\d{1,12})$/);
     if (!match || !['GET','POST'].includes(request.method)) return json({error:'Bulunamadı.'},404);
     // Client cannot provide prompts, arbitrary matches, model options or credentials.
