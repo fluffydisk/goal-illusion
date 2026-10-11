@@ -136,9 +136,17 @@ Yerel Pages önizlemesi ve kontroller:
 
 ```bash
 uv run python scripts/export_pages.py
+uv run python scripts/generate_stories.py --provider groq --evidence-only
+uv run python scripts/build_analysis_bundle.py
 uv run python -m http.server 8502 --directory web
 node --test tests/pages_math.test.mjs
+node tests/analysis_data.test.mjs
 ```
+
+Pages ve AI servisi, maç şutlarını ve doğrulanmış bulguları aynı `analysis.json`
+paketinden okur. Paket oluşturulurken her maçın veri parmak izi kontrol edilir.
+Sayfa açıkken veri düzeltilirse analiz isteği eski sürümle üretim başlatmaz;
+arayüz güncel paketi yükleyip bir kez otomatik tekrar dener.
 
 Node testi için `tests/pages_reference.json`, yayımlanan maçların Python referansını
 saklar. Bu dosya güncellendiğinde `scripts/check_pages.py` ile yeniden üretilebilir.
