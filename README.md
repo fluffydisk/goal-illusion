@@ -212,3 +212,8 @@ Yayın sonrası yeni yorum üretildiyse ve eksik maç varsa bir sonraki paket ot
 başlatılır. İlerleme yoksa zincir durur; düzenli veri güncellemesi daha sonra tekrar
 dener. Maç listesinde hazır yorumlar AI işaretiyle gösterilir ve lig bazlı kapsam
 ekranda belirtilir.
+
+Kota sınırlaması HTTP 429 ile devam ederse mevcut paketin hazır yorumları korunup
+yayımlanır; kalan maçlar başarısız yorum sayılmaz ve otomatik zincir durur. Kota
+yenilendiğinde düzenli iş yeniden dener. Üretim özeti hazır/denenen/reddedilen
+maç sayılarını açıkça gösterir.

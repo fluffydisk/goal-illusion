@@ -91,10 +91,11 @@ def generate(
                 story["failed_attempts"] = 0
                 print(f"{key}: {story['narrative']['headline']}", flush=True)
             except DataError as error:
-                story["status"] = "unavailable"
-                story["failed_attempts"] += 1
-                story["failure_reason"] = str(error)
                 rate_limited = isinstance(error, NarrativeRateLimitError)
+                story["status"] = "rate_limited" if rate_limited else "unavailable"
+                if not rate_limited:
+                    story["failed_attempts"] += 1
+                story["failure_reason"] = str(error)
                 print(f"{key}: {error}", file=sys.stderr, flush=True)
             checkpoint()
             if rate_limited:

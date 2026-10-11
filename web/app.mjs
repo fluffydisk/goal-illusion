@@ -18,7 +18,7 @@ function renderStory(d, a, sums) {
     prose.evidence_ids.every(id=>facts.evidence.some(e=>e.id===id));
   $('story-label').textContent=valid?'MAÇIN HİKÂYESİ · AI YORUMU':'MAÇIN BULGULARI';
   $('story-headline').textContent=valid?prose.headline:'Bu maçın AI yorumu henüz hazır değil.';
-  $('story-explanation').textContent=valid?prose.explanation:(item?.status==='unavailable'?'Yorum üretimi kontrollerden geçmedi ve yeniden denenecek. Sayısal analizi aşağıda inceleyebilirsin.':'Bu maç üretim kuyruğunda. Şut verilerinden hesaplanan bulguları aşağıda inceleyebilirsin.');
+  $('story-explanation').textContent=valid?prose.explanation:(item?.status==='rate_limited'?'Ücretsiz AI kotası dolduğu için yorum üretimi ertelendi. Sayısal analiz kullanılabilir.':item?.status==='unavailable'?'Yorum üretimi kontrollerden geçmedi ve yeniden denenecek. Sayısal analizi aşağıda inceleyebilirsin.':'Bu maç üretim kuyruğunda. Şut verilerinden hesaplanan bulguları aşağıda inceleyebilirsin.');
   const evidence=facts?.evidence||[
     {id:'chances',label:'Üretilen fırsatların kalitesi',text:`${d.match.home}: ${dec(sums[0])} xG · ${d.match.away}: ${dec(sums[1])} xG.`},
     {id:'outcomes',label:'Aynı şutlarla olası sonuçlar',text:`${d.match.home} galibiyeti ${pct(a.win)}, beraberlik ${pct(a.draw)}, ${d.match.away} galibiyeti ${pct(a.loss)}.`}

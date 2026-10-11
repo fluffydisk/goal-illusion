@@ -411,6 +411,7 @@ def test_failed_newest_story_does_not_starve_untested_matches(monkeypatch, tmp_p
 
 def test_quota_stops_batch_and_preserves_unattempted_matches(monkeypatch, tmp_path):
     from dataclasses import asdict
+
     from goal_illusion.narrative import NarrativeRateLimitError
 
     data = load_example()
