@@ -24,7 +24,7 @@ export default {
     const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(ip));
     const client=Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join('');
     const id=env.ANALYSES.idFromName('shared-queue-v1');
-    const response=await env.ANALYSES.get(id).fetch(new Request(`https://internal/analysis/${match[1]}`,{method:request.method,headers:{'X-Client':client}}));
+    const response=await env.ANALYSES.get(id).fetch(new Request(`https://internal/analysis/${match[1]}${url.search}`,{method:request.method,headers:{'X-Client':client}}));
     const headers=new Headers(response.headers); for (const [key,value] of Object.entries(cors)) headers.set(key,value);
     return new Response(response.body,{status:response.status,headers});
   }
@@ -33,7 +33,8 @@ export default {
 export class AnalysisQueue {
   constructor(ctx,env) {this.ctx=ctx;this.env=env;}
   async facts(id) {
-    const response=await fetch(this.env.STORIES_URL,{cf:{cacheTtl:60},signal:AbortSignal.timeout(15000)});
+    const url=new URL(this.env.STORIES_URL);url.searchParams.set('fresh',Date.now());
+    const response=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(15000)});
     if (!response.ok) throw new Error('Maç verisine ulaşılamadı.');
     const archive=await response.json(), item=archive.stories?.[id];
     if (!item?.facts?.fingerprint || !item.model_facts) return null;
@@ -43,6 +44,9 @@ export class AnalysisQueue {
     try {
       const id=new URL(request.url).pathname.split('/').pop(), item=await this.facts(id);
       if (!item) return json({error:'Doğrulanmış maç verisi bulunamadı.'},404);
+      const expected=new URL(request.url).searchParams.get('fingerprint');
+      if(expected && expected!==item.facts.fingerprint)
+        return json({status:'data_changed',fingerprint:item.facts.fingerprint},409);
       if (item.status==='ready' && item.narrative?.fingerprint===item.facts.fingerprint) return json({status:'ready',narrative:item.narrative,fingerprint:item.facts.fingerprint});
       const key=`job:${id}:${item.facts.fingerprint}`;
       return await this.ctx.blockConcurrencyWhile(async()=>{

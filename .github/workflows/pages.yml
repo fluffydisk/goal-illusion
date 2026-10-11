@@ -34,6 +34,8 @@ jobs:
           restore-keys: stories-v7b-published-
       - name: Refresh evidence and preserve existing analyses
         run: python scripts/generate_stories.py --provider groq --evidence-only
+      - name: Bind match inputs and AI evidence in one snapshot
+        run: python scripts/build_analysis_bundle.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

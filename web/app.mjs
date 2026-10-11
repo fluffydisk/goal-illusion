@@ -1,5 +1,6 @@
 import {analyze} from './math.mjs';
-import {ACTIVE, progressText, analysisRequest} from './ai-client.mjs';
+import {ACTIVE, progressText, analysisRequest} from './ai-client.mjs?v=sync1';
+import {loadAnalysisBundle, consistentAnalysis} from './analysis-data.mjs';
 const $ = id => document.getElementById(id);
 const pct = n => new Intl.NumberFormat('tr-TR',{style:'percent',maximumFractionDigits:1}).format(n);
 const dec = n => n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -31,19 +32,33 @@ function jobWidget(d) {
 }
 async function refreshJob(d,method='GET') {
   if (!aiEndpoint || hasStory(d)) return;
-  const id=String(d.match.id); activeRequest?.abort();activeRequest=new AbortController();
+  const id=String(d.match.id); activeRequest?.abort();
+  const controller=new AbortController();activeRequest=controller;
   try {
-    const result=await analysisRequest(aiEndpoint,id,method,activeRequest.signal);
-    if (result.fingerprint && result.fingerprint!==storyFor(d)?.facts?.fingerprint) throw new Error('Maç verisi güncellendi. Sayfayı yenile.');
+    const {result,data}=await consistentAnalysis({record:d,item:storyFor(d)},
+      data=>analysisRequest(aiEndpoint,id,method,controller.signal,data.item.facts.fingerprint),
+      async()=>{
+        const bundle=await loadAnalysisBundle(controller.signal);
+        controller.signal.throwIfAborted();
+        if(selectedId!==id)throw new DOMException('Match changed','AbortError');
+        snapshot=bundle.snapshot;stories=bundle;dynamicStories.clear();jobs.clear();
+        available=snapshot.matches.filter(record=>String(record.league_id||'example')===$('league').value).sort((a,b)=>b.match.date.localeCompare(a.match.date));
+        const record=available.find(record=>String(record.match.id)===id);
+        if(!record)throw new Error('Bu maç güncel veri paketinde bulunamadı.');
+        render(false);
+        return {record,item:storyFor(record)};
+      });
+    controller.signal.throwIfAborted();
+    if(selectedId!==id||activeRequest!==controller)return;
+    d=data.record;
     jobs.set(id,result);
     if (result.status==='ready' && result.narrative) dynamicStories.set(id,{...storyFor(d),status:'ready',narrative:result.narrative});
-    if (selectedId!==id) return;
     const m=d.match,home=d.shots.filter(s=>s.team_id===m.home_id),away=d.shots.filter(s=>s.team_id===m.away_id);
     renderStory(d,analyze(home.map(s=>s.xg),away.map(s=>s.xg),d.home_fixed,d.away_fixed),[home,away].map(ss=>ss.reduce((n,s)=>n+s.xg,0)));
     if(result.status==='ready'){renderCoverage();const option=[...$('match').options].find(o=>o.value===id);if(option&&!option.text.endsWith('AI ✓'))option.text+=' · AI ✓';}
     if (ACTIVE.has(result.status)) pollTimer=setTimeout(()=>refreshJob(d),4000);
   } catch(error) {
-    if (error.name==='AbortError'||selectedId!==id) return;
+    if (controller.signal.aborted||error.name==='AbortError'||selectedId!==id||activeRequest!==controller) return;
     clearInterval(clockTimer);
     $('ai-message').textContent=error.message+' Yeniden deneyebilirsin.';
     $('generate-ai').hidden=false;$('generate-ai').disabled=false;
@@ -55,7 +70,7 @@ $('generate-ai').addEventListener('click',()=>{
   $('generate-ai').disabled=true;$('ai-message').textContent='İstek gönderiliyor…';
   clearTimeout(pollTimer);refreshJob(d,'POST');
 });
-function storyFor(d) {return dynamicStories.get(String(d.match.id))||(stories?.source_updated_at===snapshot.updated_at?stories.stories?.[d.match.id]:null);}
+function storyFor(d) {return dynamicStories.get(String(d.match.id))||stories?.stories?.[d.match.id];}
 function hasStory(d) {const s=storyFor(d);return s?.status==='ready'&&s.narrative?.fingerprint===s.facts?.fingerprint;}
 function renderStory(d, a, sums) {
   const item=storyFor(d);
@@ -137,8 +152,7 @@ function render(loadJob=true) {
 $('league').addEventListener('change',selectLeague);$('match').addEventListener('change',render);
 $('share').addEventListener('click',async()=>{try{if(navigator.share)await navigator.share({title:'Goal Illusion',url:location.href});else{await navigator.clipboard.writeText(location.href);$('share').textContent='Bağlantı kopyalandı ✓';}}catch{ $('status').textContent='Paylaşmak için adres çubuğundaki bağlantıyı kopyalayabilirsin.';}});
 try{
- const response=await fetch('data/matches.json');if(!response.ok)throw new Error('Veri dosyası okunamadı');snapshot=await response.json();
- try {const sr=await fetch('data/stories.json');if(sr.ok)stories=await sr.json();}catch{stories=null;}
+ const bundle=await loadAnalysisBundle();snapshot=bundle.snapshot;stories=bundle;
  const leagues=[...new Set(snapshot.matches.map(d=>String(d.league_id||'example')))];
  $('league').replaceChildren(...leagues.map(id=>new Option(id==='71'?'Süper Lig · Türkiye':id==='54'?'Bundesliga · Almanya':'Dünya Kupası · örnek maç',id)));
  const requested=snapshot.matches.find(d=>String(d.match.id)===new URL(location.href).searchParams.get('match'));

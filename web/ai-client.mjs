@@ -9,8 +9,9 @@ export function progressText(job, now=Date.now()) {
     : `Bu aşama için tahmini bekleme: ${Math.max(0,low-stageElapsed)}–${Math.max(0,high-stageElapsed)} sn. Süre yoğunluğa göre değişebilir.`};
 }
 
-export async function analysisRequest(endpoint, id, method='GET', signal) {
-  const response=await fetch(`${endpoint.replace(/\/$/,'')}/analysis/${encodeURIComponent(id)}`,{method,signal:AbortSignal.any([signal||new AbortController().signal,AbortSignal.timeout(20000)])});
+export async function analysisRequest(endpoint, id, method='GET', signal, fingerprint) {
+  const query=fingerprint?`?fingerprint=${encodeURIComponent(fingerprint)}`:'';
+  const response=await fetch(`${endpoint.replace(/\/$/,'')}/analysis/${encodeURIComponent(id)}${query}`,{method,cache:'no-store',signal:AbortSignal.any([signal||new AbortController().signal,AbortSignal.timeout(20000)])});
   const result=await response.json();
   if (!response.ok && !result.status) throw new Error(result.error||'Analiz servisine ulaşılamadı.');
   return result;

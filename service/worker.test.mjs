@@ -8,6 +8,12 @@ const archive=JSON.parse(readFileSync(new URL('../web/data/stories.json',import.
 const original=Object.values(archive.stories)[0];
 const item={...original,status:'pending',narrative:null};
 const valid=original.narrative;
+test('mismatched client version is rejected before quota or queue changes',async()=>{
+  const {queue,storage}=setup();
+  const response=await queue.fetch(new Request('https://internal/analysis/1?fingerprint=old',{method:'POST'}));
+  assert.equal(response.status,409);assert.equal((await response.json()).status,'data_changed');
+  assert.equal(await storage.get('quota'),undefined);assert.equal(await storage.get('queue'),undefined);
+});
 class Storage {
   values=new Map(); alarm=null;
   async get(key){return structuredClone(this.values.get(key));}

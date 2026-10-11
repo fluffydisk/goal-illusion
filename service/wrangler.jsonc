@@ -6,7 +6,7 @@
   "keep_vars": true,
   "vars": {
     "SITE_ORIGIN": "https://fluffydisk.github.io",
-    "STORIES_URL": "https://fluffydisk.github.io/goal-illusion/data/stories.json",
+    "STORIES_URL": "https://fluffydisk.github.io/goal-illusion/data/analysis.json",
     "DAILY_GENERATION_LIMIT": "80"
   },
   "durable_objects": {
