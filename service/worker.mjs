@@ -9,7 +9,7 @@ export function publicJob(job, position) {
   const {status,started_at,updated_at,narrative,fingerprint,error,retry_at,attempt,resume_status}=job;
   const issue=job.last_failure||job.feedback||'';
   const failure_code=status==='failed' ? (/tamamlanamadı/.test(issue)?'incomplete_output':/uzunluk/.test(issue)?'story_length':/cümle/.test(issue)?'sentence_count':/bölüm/.test(issue)?'section_order':/biçim/.test(issue)?'schema':/sayı/.test(issue)?'number':/iddia/.test(issue)?'unsupported_claim':/kanıt|Kanıt/.test(issue)?'evidence':/manşet/.test(issue)?'style':/HTTP/.test(issue)?'provider_http':/Anlam kontrolü/.test(issue)?'editor_rejected':'unknown') : undefined;
-  return {status,failure_code,phase:status==='queued'&&position?`${position}. sırada bekliyor`:phases[status],queue_position:position,eta_reference_at:status==='queued'&&position?Date.now():updated_at,started_at,updated_at,narrative,fingerprint,error,retry_at,attempt,resume_status,
+  return {status,failure_code,phase:status==='queued'&&position?`${position}. sırada bekliyor`:status==='generating'&&attempt>0?'Hikâye gözden geçiriliyor':phases[status],queue_position:position,eta_reference_at:status==='queued'&&position?Date.now():updated_at,started_at,updated_at,narrative,fingerprint,error,retry_at,attempt,resume_status,
     // No fabricated percentage/countdown: estimates stay an explicit range.
     estimated_seconds: status==='waiting_provider'?[Math.max(0,Math.ceil((retry_at-updated_at)/1000)),Math.max(0,Math.ceil((retry_at-updated_at)/1000))+60]:status==='queued'?[30+Math.max(0,(position||1)-1)*90,180+Math.max(0,(position||1)-1)*180]:status==='reviewing'?[10,60]:[20,90]};
 }
@@ -116,9 +116,13 @@ export class AnalysisQueue {
       if (job.status==='queued' || job.status==='generating') {
         job.status='generating';job.updated_at=Date.now();await this.ctx.storage.put(key,job);
         const messages=[{role:'system',content:contract.system},{role:'user',content:JSON.stringify(modelInput)}];
-        if (job.feedback) messages.push({role:'user',content:`Önceki denemenin hatasını düzelt: ${job.feedback}`});
+        if (job.feedback) {
+          if(job.revision)messages.push({role:'assistant',content:JSON.stringify(job.revision)});
+          messages.push({role:'user',content:`Taslağın yalnızca hatalı bölümlerini düzelt; doğru olayları koru. Hata: ${job.feedback}. Bütün hikâyeyi aynı JSON sözleşmesiyle döndür.`});
+        }
         const draft=await this.complete(messages,contract.schema,'match_story');
         job.generation=this.lastCompletion||providers(this.env)[0];
+        if(draft&&JSON.stringify(draft).length<20000)job.revision=draft;
         job.draft=validateProse(draft,job.facts,job.model_facts);job.status='waiting_provider';job.resume_status='reviewing';job.updated_at=Date.now();job.retry_at=Date.now()+100;
         await this.ctx.storage.put(key,job);
         // Separate alarm provides durable progress and avoids background-response timeouts.
@@ -129,15 +133,16 @@ export class AnalysisQueue {
       },'factual_review',true);
       if (review.approved!==true) throw new Error(`Anlam kontrolü: ${String(review.reason).slice(0,200)}`);
       job.narrative={...job.draft,fingerprint:job.fingerprint,story_version:contract.story_version,prompt_version:contract.prompt_version,...(job.generation||providers(this.env)[0]),review_provider:this.lastCompletion?.provider,review_model:this.lastCompletion?.model,generated_at:new Date().toISOString()};
-      job.status='ready'; delete job.draft; delete job.feedback; delete job.retry_at; delete job.resume_status;
+      job.status='ready'; delete job.draft; delete job.revision; delete job.feedback; delete job.retry_at; delete job.resume_status;
     } catch (error) {
-      job.last_failure=String(error.message).slice(0,200);
+      job.last_failure=String(error.message).slice(0,400);
+      console.warn(JSON.stringify({event:'analysis_check',job:key,stage:job.status,attempt:job.attempt,reason:job.last_failure}));
       if(error.quota || error.transient){
         job.resume_status=job.status;job.status='waiting_provider';job.updated_at=Date.now();job.retry_at=Date.now()+Math.max(20000,error.retryMs||60000);
         await this.ctx.storage.put(key,job);await this.schedule();return;
       }
       else if (job.attempt<1) {
-        job.attempt++;job.feedback=String(error.message).slice(0,200);job.status='generating';job.updated_at=Date.now();
+        job.attempt++;job.feedback=String(error.message).slice(0,400);job.status='generating';job.updated_at=Date.now();
         await this.ctx.storage.put(key,job); await this.ctx.storage.setAlarm(Date.now()+20000);return;
       } else {job.status='failed';job.error='Yorum kalite kontrollerini geçemedi veya servis yanıt vermedi. Yeniden deneyebilirsin.';job.retry_at=Date.now()+60000;}
     } finally {

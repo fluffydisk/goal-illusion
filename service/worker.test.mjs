@@ -199,3 +199,18 @@ test('Turkish ordinal minutes are not extra sentences',()=>{
  value.cards[0].text='İki takımın toplam gol beklentileri birbirine yakın kaldı. Gerçek skor ayrı bir sonuçtu. İlk fırsat ayrıydı. İkinci fırsat ayrıydı. Son fırsat ayrıydı.';
  assert.throws(()=>validateProse(value,item.facts,item.model_facts),/cümle/);
 });
+test('Turkish chance wording matches Python validation without treating suffixes as luck',()=>{
+ const value=structuredClone(valid);
+ value.cards[0].text='Takımların gol şansı ürettiği kayıtlı pozisyonların kaliteleri birbirine yakın kaldı. Galibiyet şansı aynı şutların tekrarına koşullu bir hesaplamadır.';
+ assert.doesNotThrow(()=>validateProse(value,item.facts,item.model_facts));
+ value.cards[0].text='İki takımın toplam gol beklentileri birbirine yakın kaldı. Ev sahibi şanslı olduğu için farklı kazandı.';
+ assert.throws(()=>validateProse(value,item.facts,item.model_facts),/iddia/);
+});
+test('repair receives the rejected draft and concrete feedback',async()=>{
+ const {queue,request}=setup();await queue.fetch(request());let seen;
+ const bad=structuredClone(valid);bad.cards[0].text='Kaleci ve savunma galibiyeti getirdi. Bu maçın sonucunu kesinlikle bu performans belirledi.';
+ queue.complete=async()=>bad;await queue.alarm();
+ queue.complete=async messages=>{seen=messages;return valid;};await queue.alarm();
+ assert.deepEqual(JSON.parse(seen.find(m=>m.role==='assistant').content),bad);
+ assert.match(seen.at(-1).content,/kaleci/);
+});
