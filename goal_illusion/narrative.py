@@ -237,6 +237,7 @@ def validate_narrative(value: dict, facts: dict) -> dict:
         names.extend(e["player"] for e in facts.get("events", []) if e.get("player"))
         for name in names:
             sentence_text = sentence_text.replace(name, "Oyuncu")
+        sentence_text = re.sub(r"(\d)\.(?=\s+(?:dakika|devre|yarı|uzatma))", r"\1", sentence_text)
         if not 2 <= len(re.findall(r"[.!?](?=\s|$)", sentence_text)) <= 4:
             raise DataError("Story kartları 2–4 cümle içermeli.")
     return value

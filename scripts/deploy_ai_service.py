@@ -1,4 +1,4 @@
-"""Deploy without exposing a mistakenly configured plaintext Groq binding in CLI logs."""
+"""Deploy without exposing a mistakenly configured plaintext provider binding in CLI logs."""
 
 import re
 import subprocess
@@ -8,8 +8,8 @@ from pathlib import Path
 
 
 def redact(text):
-    text = re.sub(r"gsk_[A-Za-z0-9_-]+", "[REDACTED]", text)
-    return re.sub(r'("GROQ_API_KEY"\s*:\s*")[^"\n]*(")', r"\1[REDACTED]\2", text)
+    text = re.sub(r"(?:gsk_|AIza)[A-Za-z0-9_-]+", "[REDACTED]", text)
+    return re.sub(r'("(?:GROQ|GEMINI)_API_KEY"\s*:\s*")[^"\n]*(")', r"\1[REDACTED]\2", text)
 
 
 root = Path(__file__).resolve().parents[1]

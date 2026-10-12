@@ -1,4 +1,4 @@
-// Manual integration check of the Worker's actual high-effort Groq calls.
+// Manual integration check of the Worker's actual primary/fallback calls.
 // This publishes no narrative and never changes the public analysis cache.
 import {readFileSync,writeFileSync} from 'node:fs';
 import contract from '../service/contract.json' with {type:'json'};
@@ -8,14 +8,14 @@ if(ids.length>3||ids.some(id=>!/^\d+$/.test(id)))throw new Error('Bir ile üç m
 const archive=JSON.parse(readFileSync(new URL('../web/data/stories.json',import.meta.url)));
 async function check(id){
 const item=archive.stories[id];
-if(!item?.model_facts||!process.env.GROQ_API_KEY)throw new Error('Maç girdisi veya sunucu anahtarı eksik.');
+if(!item?.model_facts||!(process.env.GEMINI_API_KEY||process.env.GROQ_API_KEY))throw new Error('Maç girdisi veya sunucu anahtarı eksik.');
 const values=new Map();let alarmAt=0;
 const storage={
   async get(key){return structuredClone(values.get(key));},
   async put(key,value){if(typeof key==='object')for(const [k,v] of Object.entries(key))values.set(k,structuredClone(v));else values.set(key,structuredClone(value));},
   async setAlarm(t){alarmAt=t;}
 };
-const queue=new AnalysisQueue({storage,blockConcurrencyWhile:fn=>fn()},{GROQ_API_KEY:process.env.GROQ_API_KEY});
+const queue=new AnalysisQueue({storage,blockConcurrencyWhile:fn=>fn()},{GEMINI_API_KEY:process.env.GEMINI_API_KEY,GROQ_API_KEY:process.env.GROQ_API_KEY});
 const complete=queue.complete.bind(queue);
 queue.complete=async(...args)=>{
   const result=await complete(...args);
@@ -25,6 +25,7 @@ queue.complete=async(...args)=>{
 await storage.put('queue',['integration-check']);
 await storage.put('integration-check',{status:'queued',prompt_version:contract.prompt_version,fingerprint:item.facts.fingerprint,facts:item.facts,model_facts:item.model_facts,started_at:Date.now(),updated_at:Date.now(),attempt:0});
 for(let i=0;i<8;i++){
+  if(alarmAt-Date.now()>120000)throw new Error('Sağlayıcı kotası iki dakikadan uzun bekleme istiyor; test durduruldu.');
   if(alarmAt>Date.now())await new Promise(resolve=>setTimeout(resolve,alarmAt-Date.now()));
   await queue.alarm();
   const job=await storage.get('integration-check');console.log(`Stage: ${job.status}`);

@@ -543,3 +543,13 @@ def test_story_contract_rejects_invalid_cards(facts, prose, mutation):
         del value["cards"][0]["text"]
     with pytest.raises(DataError):
         validate_narrative(value, facts)
+
+
+def test_ordinal_minutes_do_not_count_as_sentences(facts, prose):
+    value = json.loads(json.dumps(prose))
+    value['cards'][0]['text'] = (
+        '1. dakikadaki fırsat ile 2. dakikadaki fırsat birbirinden ayrı pozisyonlardı. '
+        'İki takımın toplam gol beklentileri birbirine yakın kaldı. '
+        'Gerçek skor ise aynı şutlarla oluşabilecek sonuçlardan yalnızca biri.'
+    )
+    assert validate_narrative(value, facts) == value

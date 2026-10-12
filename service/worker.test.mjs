@@ -85,7 +85,7 @@ test('fingerprint change invalidates previous generated prose',async()=>{
 });
 test('quota errors expose a retry time without leaking provider errors',async()=>{
   const {queue,request}=setup();await queue.fetch(request());queue.complete=async()=>{const e=new Error('secret response');e.quota=true;throw e;};await queue.alarm();
-  const result=await (await queue.fetch(request('GET'))).json();assert.equal(result.status,'rate_limited');assert.ok(result.retry_at>Date.now());assert.ok(!JSON.stringify(result).includes('secret'));
+  const result=await (await queue.fetch(request('GET'))).json();assert.equal(result.status,'waiting_provider');assert.ok(result.retry_at>Date.now());assert.ok(!JSON.stringify(result).includes('secret'));
 });
 test('widget gives estimates and elapsed time without fake completion percentages',()=>{
   const job={status:'generating',started_at:1000,estimated_seconds:[20,90]};
@@ -105,8 +105,8 @@ test('queue preserves a second visitor added during model generation',async()=>{
 });
 test('provider cooldown prevents queued jobs from consuming more provider quota',async()=>{
   const {queue,storage,request}=setup();await queue.fetch(request());await storage.put('provider_cooldown',Date.now()+3600000);
-  queue.complete=async()=>{assert.fail('quota cooldown must not call provider');};await queue.alarm();
-  assert.equal((await (await queue.fetch(request('GET'))).json()).status,'rate_limited');
+  await queue.alarm();
+  assert.equal((await (await queue.fetch(request('GET'))).json()).status,'waiting_provider');
 });
 test('unconfigured credentials cannot consume quota or start jobs',async()=>{
   const {queue,storage,request}=setup();delete queue.env.GROQ_API_KEY;
@@ -134,17 +134,17 @@ test('queued visitors see their actual position and a longer estimate',async()=>
   const response=await queue.fetch(new Request('https://internal/analysis/2',{method:'POST',headers:{'X-Client':'another'}}));
   const job=await response.json();assert.equal(job.queue_position,2);assert.equal(job.estimated_seconds[0],120);assert.match(job.phase,/2\./);
 });
-test('a manual retry after longer quota expiry reuses the retained draft',async()=>{
+test('long quota waits automatically resume without another POST or quota charge',async()=>{
   const {queue,storage,request}=setup();await queue.fetch(request());let generated=0,reviewed=0;
   queue.complete=async(_,__,name)=>{
     if(name==='match_story'){generated++;return {headline:valid.headline,summary:valid.summary,cards:valid.cards};}
     if(++reviewed===1){const e=new Error('Long quota');e.quota=true;e.retryMs=3600000;throw e;}return {approved:true,reason:'Doğru.'};
   };
   await queue.alarm();await queue.alarm();const key=[...storage.values.keys()].find(k=>k.startsWith('job:'));
-  const job=await storage.get(key);assert.equal(job.status,'rate_limited');assert.ok(job.draft);
+  const job=await storage.get(key);assert.equal(job.status,'waiting_provider');assert.ok(job.draft);
   job.retry_at=0;await storage.put(key,job);await storage.put('provider_cooldown',0);
-  await queue.fetch(request());await queue.alarm();
-  assert.equal((await (await queue.fetch(request('GET'))).json()).status,'ready');assert.equal(generated,1);
+  await queue.alarm();
+  assert.equal((await (await queue.fetch(request('GET'))).json()).status,'ready');assert.equal(generated,1);assert.equal((await storage.get('quota')).count,1);
 });
 
 test('new service refuses old evidence without charging quota',async()=>{
@@ -166,4 +166,36 @@ test('every story card is checked, including late unsupported claims',()=>{
  const value=structuredClone(valid);value.cards.at(-1).text='Kaleci ve savunma galibiyeti getirdi. Bu maçın sonucunu kesinlikle bu performans belirledi.';
  assert.throws(()=>validateProse(value,item.facts,item.model_facts));
  const wrong=structuredClone(valid);wrong.cards.reverse();assert.throws(()=>validateProse(wrong,item.facts,item.model_facts));
+});
+test('a long waiting job does not block a new eligible match',async()=>{
+ const {queue,storage,request}=setup();await queue.fetch(request());
+ const first=(await storage.get('queue'))[0],job=await storage.get(first);
+ job.status='waiting_provider';job.resume_status='generating';job.retry_at=Date.now()+3600000;
+ await storage.put(first,job);await storage.setAlarm(job.retry_at);
+ await queue.fetch(new Request('https://internal/analysis/2',{method:'POST',headers:{'X-Client':'another'}}));
+ assert.ok((await storage.getAlarm())<job.retry_at);
+ queue.complete=async()=>valid;
+ // Bypass the test helper that expires the first job's timer.
+ await AnalysisQueue.prototype.alarm.call(queue);
+ const keys=await storage.get('queue');assert.equal((await storage.get(first)).retry_at,job.retry_at);
+ assert.ok((await storage.get(keys[1])).draft);
+});
+test('review connection failure preserves generation and provider provenance',async()=>{
+ const {queue,storage,request}=setup();await queue.fetch(request());let generated=0,reviewed=0;
+ queue.complete=async(_,__,name)=>{
+  if(name==='match_story'){generated++;queue.lastCompletion={provider:'gemini',model:'test-gemini'};return valid;}
+  if(++reviewed===1){const e=new Error('Network');e.transient=true;throw e;}
+  queue.lastCompletion={provider:'groq',model:'test-groq'};return {approved:true,reason:'Uyumlu.'};
+ };
+ await queue.alarm();await queue.alarm();await queue.alarm();
+ const result=await(await queue.fetch(request('GET'))).json();
+ assert.equal(result.status,'ready');assert.equal(generated,1);assert.equal(result.narrative.provider,'gemini');assert.equal(result.narrative.review_provider,'groq');
+ assert.equal((await storage.get('quota')).count,1);
+});
+test('Turkish ordinal minutes are not extra sentences',()=>{
+ const value=structuredClone(valid);
+ value.cards[0].text='1. dakikadaki fırsat ile 2. dakikadaki fırsat birbirinden ayrı pozisyonlardı. İki takımın toplam gol beklentileri birbirine yakın kaldı. Gerçek skor ise aynı şutlarla oluşabilecek sonuçlardan yalnızca biri.';
+ assert.doesNotThrow(()=>validateProse(value,item.facts,item.model_facts));
+ value.cards[0].text='İki takımın toplam gol beklentileri birbirine yakın kaldı. Gerçek skor ayrı bir sonuçtu. İlk fırsat ayrıydı. İkinci fırsat ayrıydı. Son fırsat ayrıydı.';
+ assert.throws(()=>validateProse(value,item.facts,item.model_facts),/cümle/);
 });

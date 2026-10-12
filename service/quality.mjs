@@ -17,7 +17,8 @@ function validateShortProse(value, facts, modelFacts, checkTotals=true) {
     if (/[<>\n#*\[\]`]|https?:\/\//u.test(stripped)) throw new Error('Yorum biçimlendirme içeriyor.');
     for (const number of stripped.match(/\d+(?:[.,]\d+)?/g)||[]) if (!allowed.has(Number(number.replace(',','.')))) throw new Error('Veride bulunmayan sayı.');
     const lower=text.toLocaleLowerCase('tr-TR');
-    if (/şanslı|şanssız|\bşans\b|hak et|hakett|pres|kaleci|savunma|taktik|hakem|topa sahip|kesinlikle|luck|deserv|possession|goalkeeper|defen|dominat|baskın oyun|uzaklık|sonucu doğrula|şut başına gol oran|garanti|öngör|sonucu belirledi|kesin galibiyet|galibiyeti getirdi|skoru belirledi|kanıtladı|haklı çıkar|domine/u.test(lower)) throw new Error('Şut verisinden çıkarılamayan iddia.');
+    const unsupported=lower.match(/şanslı|şanssız|\bşans\b|hak et|hakett|pres|kaleci|savunma|taktik|hakem|topa sahip|kesinlikle|luck|deserv|possession|goalkeeper|defen|dominat|baskın oyun|uzaklık|sonucu doğrula|şut başına gol oran|garanti|öngör|sonucu belirledi|kesin galibiyet|galibiyeti getirdi|skoru belirledi|kanıtladı|haklı çıkar|domine/u);
+    if (unsupported) throw new Error(`Şut verisinden çıkarılamayan iddia: «${unsupported[0]}». Bu ifadeyi kaldırıp kaydedilmiş pozisyonları yorumla.`);
     if (checkTotals && facts.home.goals===facts.away.goals && /daha (az|fazla|çok) gol(?:le|ü|ler|leri)?\b(?!\s+(?:fırsat|beklenti|olasılık|pozisyon))/u.test(lower)) throw new Error('Eşit skora aykırı iddia.');
     if (checkTotals && facts.home.shots===facts.away.shots && /daha (az|fazla|çok) şut(?:la|u|lar|ları)?\b(?!\s+(?:kalite|beklenti|olasılık))/u.test(lower)) throw new Error('Eşit şut sayısına aykırı iddia.');
   }
@@ -43,6 +44,8 @@ export function validateProse(value, facts, modelFacts) {
     check(c.title,c.text,c.evidence_ids,8,90,80,650,false);
     let sentenceText=c.text;
     for(const name of [facts.home.name,facts.away.name,...(facts.events||[]).map(e=>e.player).filter(Boolean)]) sentenceText=sentenceText.split(name).join('Oyuncu');
+    // Turkish ordinal minutes/halves are not sentence boundaries.
+    sentenceText=sentenceText.replace(/(\d)\.(?=\s+(?:dakika|devre|yarı|uzatma))/gu,'$1');
     const sentences=(sentenceText.match(/[.!?](?=\s|$)/gu)||[]).length;
     if(sentences<2||sentences>4)throw new Error('Story kartları 2–4 cümle içermeli.');
   }

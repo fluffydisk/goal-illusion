@@ -19,6 +19,7 @@ jobs:
           node-version: '24'
       - name: Generate and independently review test stories
         env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           MATCH_IDS: ${{ inputs.match_id }}
         run: node scripts/check_ai_service.mjs

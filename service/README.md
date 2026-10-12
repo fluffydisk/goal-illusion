@@ -13,13 +13,19 @@ cd service
 npm ci
 npx wrangler login
 python ../scripts/deploy_ai_service.py
+npx wrangler secret put GEMINI_API_KEY
+# İsteğe bağlı yedek sağlayıcı
 npx wrangler secret put GROQ_API_KEY
 ```
 
-Son komutta Groq anahtarını gizli terminal girdisine yapıştır. Anahtarı kaynak koda,
+Secret komutlarında ilgili sağlayıcı anahtarını gizli terminal girdisine yapıştır. Anahtarı kaynak koda,
 `.dev.vars` hariç dosyalara, GitHub issue'larına veya site yapılandırmasına yazma.
 İstersen Cloudflare dashboard → Workers & Pages → goal-illusion-ai → Settings →
-Variables and Secrets → Add yolunda `GROQ_API_KEY`, tür **Secret** olarak ekle.
+Variables and Secrets → Add yolunda `GEMINI_API_KEY` ve isteğe bağlı
+`GROQ_API_KEY`, tür **Secret** olarak ekle. Gemini anahtarını AI Studio’da
+faturalandırma bağlı olmayan bir projede oluştur: https://aistudio.google.com/api-keys.
+API çağrısı proje faturalandırmasını kapatamaz; ücretsiz kullanım için proje ücretsiz
+katmanda kalmalıdır. Kod ücretli plana geçmez veya farklı ücretli model seçmez.
 `web/data/site.json` içinde `ai_endpoint` değerine dağıtımın `https://…workers.dev`
 adresini yaz. Pages'i tekrar yayımla. Yeni hesapta workers.dev alt alanı açılması
 gerekebilir. Ücretsiz SQLite Durable Objects kullanılır; ücretli plana geçilmez.
@@ -31,16 +37,21 @@ tekrar dağıt. Sitedeki `model_facts` alanı Python motorunun aynı girdisidir.
 ## Akış ve kalite
 
 Sıradaki iş bir Durable Object alarmıyla başlar. Yorum üretimi ve ayrı editör kontrolü
-farklı alarmlarda gerçekleşir; üretimden sonra ücretsiz dakika kotası için 60 sn beklenir; tarayıcı kapanırsa iş sunucuda sürer. Her API çağrısında
+farklı alarmlarda gerçekleşir. Gemini 3.8 Flash önceliklidir; kota/bağlantı veya
+erişim sorunu varsa yapılandırılmış Groq yedeği kullanılır. Groq çağrıları arasında
+ücretsiz dakika kotası için 60 sn beklenir; tarayıcı kapanırsa iş sunucuda sürer. Her API çağrısında
 120 sn zaman aşımı vardır. Kontrol geçmeyen metne düzeltme için en fazla bir yeni
-deneme verilir; başarısız metin hazır olarak saklanmaz. Güçlü model değiştirilmez.
-İstemci 4 saniyede bir gerçek aşamayı okur. Süre tahminidir; Groq bir tamamlanma yüzdesi
+deneme verilir; başarısız metin hazır olarak saklanmaz. Kalite reddi sağlayıcı değiştirerek atlanmaz.
+İstemci 4 saniyede bir gerçek aşamayı okur. Süre tahminidir; sağlayıcılar bir tamamlanma yüzdesi
 ve kesin bitiş zamanı sağlamaz.
 
 Günde 80 üretim başlangıcı, istemci/IP hash'i başına 10 dakikada 3 yeni istek ve en
 fazla 10 sıradaki iş vardır. Ham IP saklanmaz. CORS tek siteye izin verir; CORS kimlik
 doğrulama değildir, üretim sınırları ve sağlayıcı kotası ücretsiz kullanımı sınırlar.
-Kısa süreli kota sınırında taslak korunur, widget bekleme aşamasını gösterir ve kontrol en fazla iki kez otomatik sürdürülür. Uzun süreli kota sınırında yeniden deneme zamanı verilir; sonraki manuel denemede mevcut taslak kullanılarak doğruluk kontrolü sürdürülür. Sonuçlar yalnızca maç/veri parmak izi
+Kota sınırında taslak ve kuyruk işi korunur; widget gerçek bekleme zamanını gösterir.
+Uzun beklemeler de sunucuda otomatik sürdürülür; yeni POST veya ikinci kota ücreti
+gerekmez. Her sağlayıcının bekleme süresi ayrı saklanır. Bekleyen bir iş çalışmaya
+hazır diğer işleri engellemez. Sonuçlar yalnızca maç/veri parmak izi
 bazında yeniden kullanılır. Sağlayıcı anahtarı veya yanıt hata gövdesi loglanmaz.
 
 ## Doğrulama
@@ -52,11 +63,11 @@ npx wrangler deploy --dry-run
 
 Testler sıra birleşmesini, GET'in üretim yapmamasını, bağımsız editör şartını,
 reddedilen metnin yayımlanmamasını, parmak izi değişimini, kota davranışını ve arşiv
-metinlerinin JavaScript kalite kontrolünü kapsar. Gerçek Groq uçtan uca doğrulaması
+metinlerinin JavaScript kalite kontrolünü kapsar. Gerçek sağlayıcı uçtan uca doğrulaması
 secret bağlandıktan sonra yorum bulunmayan bir maça tıklanarak yapılır.
 
 `GET /health` yalnızca sunucu anahtarının bağlanıp bağlanmadığını bildirir; anahtar değeri döndürülmez.
-Manuel `Check on-demand AI quality` GitHub işi, Worker’ın gerçek Groq çağrılarını
+Manuel `Check on-demand AI quality` GitHub işi, Worker’ın gerçek Gemini/Groq çağrılarını
 test eder. Üretilen deneme metni siteye veya ortak analiz önbelleğine yayımlanmaz.
 
 ## Story v2 geçişi
@@ -73,7 +84,9 @@ Pages ve Worker birlikte yayımlanmalıdır. Geçiş sırasında sürümler uyu�
 metinler yeni hikâye gibi sunulmaz; eski arşiv topluca yeniden üretilmez.
 
 Tek çağrıda bütün hikâye, ayrı çağrıda bütün kartların editör kontrolü yapılır.
-Token sınırı uzun hikâyeler için 8192'dir; sağlayıcı kotası ve süre sınırları geçerlidir.
-Üç gerçek örnek için `GROQ_API_KEY` güvenli ortamda tanımlıyken kök dizinde
+Yazım çağrısının çıktı bütçesi 4096, editörünki 2048 tokendir; düşünme düzeyi düşüktür.
+Girdi tüm hesaplanmış özetleri, tüm şut gollerini ve devrelerin önemli fırsatlarını
+içerir; tam şut listesi arayüzde korunur. Sağlayıcı kotası ve süre sınırları geçerlidir.
+Üç gerçek örnek için `GEMINI_API_KEY` (veya yedek `GROQ_API_KEY`) güvenli ortamda tanımlıyken kök dizinde
 `node scripts/check_ai_service.mjs` çalıştırın. İsteğe bağlı `MATCH_IDS` en fazla
 üç virgülle ayrılmış kimlik alır. Bu kontrol yayımlanmış önbelleği değiştirmez.
