@@ -24,6 +24,8 @@ incelemek için yayımlandı. Ziyaretçi hesabı veya API anahtarı gerekmez.
 114 Python ve 80 Node testi geçti. GitHub Pages yayını Python/Node/Ruff kontrolleri
 geçmeden yapılmaz. Canlı tarayıcıda altı lig, CORS/dil desteği, mobil/koyu görünüm,
 gerçek CSV/JSON indirme, favori kalıcılığı, PWA açılışı ve çevrimdışı kullanım doğrulandı.
+Mevcut canlı PWA sürümünün yeni önbellek ailesine geçişi ve seçili maçın
+internetsiz açılışı ayrıca kontrol edildi.
 İngiltere–Senegal örneğinin altı kartlık İngilizce yorumu Gemini tarafından üretildi
 ve Groq'un ayrı incelemesiyle onaylandı; gerçek İngilizce okuyucu da kontrol edildi.
 

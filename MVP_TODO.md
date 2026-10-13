@@ -82,7 +82,7 @@ Otomatik devam yalnızca mevcut kullanım penceresi için yetkilidir: 13 Ekim 20
 - [x] Lig bazında doğrulanmış/verisi beklenen maç kapsamı ve kaynak bağlantıları.
 - [x] Favori/tema sekmeler arası eşitleme, favori temizleme/geri alma ve JSON yedeği.
 - [x] Doğrulanmış uygulama/veri sürümüyle çevrimdışı kullanım ve PWA yükleme desteği.
-- [ ] Yayın öncesi Worker dil desteğini ve gerçek hedef ortamda PWA güncellemesini kontrol et.
+- [x] Worker dil desteğini ve gerçek Pages ortamında PWA sürüm güncellemesini doğrula.
 - [ ] Kaynak hakları netleştiğinde takım armaları; kullanıcı geri bildiriminden sonraki arayüz düzenlemeleri.
 
 Önceki ardışık çalışmanın heartbeat otomasyonu PAUSED kaldı. O turdaki zamanlayıcı
@@ -101,7 +101,7 @@ sınırlamaz; heartbeat yeniden açılmayacak.
 - [x] MVP kaynaklarını GitHub main dalına gönder ve Pages işini doğrula.
 - [x] Canlı sitede Türkçe/İngilizce, mobil, indirilen dosya ve PWA açılışını doğrula.
 - [x] Canlı Worker'da gerçek İngilizce üretim ve bağımsız incelemeyi doğrula.
-- [ ] MVP sürüm notları ve GitHub sürüm kaydı.
+- [x] MVP sürüm notları ve GitHub v0.1.0 sürüm kaydı.
 
 MVP sonrası: lisans/kaynak doğrulanınca takım armaları; kullanıcı geri bildirimine
 göre arayüz; yeni diller. Canlı skor ve maç öncesi tahmin bu MVP'ye dahil değil.
@@ -112,3 +112,10 @@ göre arayüz; yeni diller. Canlı skor ve maç öncesi tahmin bu MVP'ye dahil d
 - [ ] Maç kimliği ve veri sürümünü içeren hata/geri bildirim bağlantısı.
 - [ ] Takım özeti ve seçili filtreleri taşıyan paylaşılabilir bağlantı.
 - [ ] Sayısal analizden skor/xG paylaşım görseli; kaynak ve veri tarihi dahil.
+
+
+MVP yayın adresi: https://fluffydisk.github.io/goal-illusion/
+Sürüm kaydı: https://github.com/fluffydisk/goal-illusion/releases/tag/v0.1.0
+Son kod yayını: 94b6070; Pages işinin build/deploy sonucu başarılı. Mevcut canlı
+PWA önbelleği yeni nesille güncellendi, eski nesil temizlendi ve seçili maç
+internetsiz açıldı. Yayın checklist'i tamamlandı; açık kutular MVP sonrası backlog'dur.

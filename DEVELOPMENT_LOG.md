@@ -212,3 +212,14 @@ Gemini üretimi ve Groq bağımsız incelemesi; altı kart, attempt=0. Hazır so
 ile ayrıca yerel kalite/kanıt doğrulaması uygulandı. Canlı tarayıcı: altı lig,
 Worker CORS/diller, iki maç CSV, TR/EN, koyu/320px, favori kalıcılığı, PWA install,
 offline reload/JSON download ve ağ geri dönüşü geçti. Tarayıcı testi AI POST yapmaz.
+
+Son Pages kod yayını 94b6070 için build/deploy başarılı:
+https://github.com/fluffydisk/goal-illusion/actions/runs/38369351243
+Gerçek canlı PWA güncellemesi kalıcı test profiliyle doğrulandı: eski
+goal-illusion-a25c28d8b7d3d3d432b3 ailesi yeni nesille değişti; yalnızca yeni
+önbellek kaldı, seçili İngiltere–Senegal skoru korundu ve offline açılış geçti.
+Canlı İngilizce okuyucu altı onaylı kartı açtı; kabul tarayıcı testi AI POST göndermez.
+MVP v0.1.0 sürüm notları ve sürüm kaydı hazır. Arma/kullanıcı geri bildirimi/ek
+diller ve önerilen küçük işler MVP sonrası listede açık; bunlar tamamlandı diye
+işaretlenmedi. Heartbeat PAUSED kalır. Kullanıcının yayın yetkisiyle commit/push,
+Worker deploy ve Pages deploy yapıldı; yeni ücretli servis veya plan açılmadı.
