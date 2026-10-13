@@ -2,6 +2,7 @@ name: Publish Goal Illusion
 on:
   push:
     branches: [main]
+    paths-ignore: ['**/*.md']
   workflow_dispatch:
   schedule:
     - cron: '17 */6 * * *'
@@ -30,6 +31,7 @@ jobs:
         run: |
           uv run python -m pytest -q
           uv run ruff check .
+          uv run python scripts/build_analysis_bundle.py
           node --test tests/*.test.mjs service/*.test.mjs
       - uses: actions/cache@v4
         with:
