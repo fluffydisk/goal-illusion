@@ -23,11 +23,13 @@ jobs:
         with:
           node-version: '24'
       - name: Install application and validation dependencies
-        run: pip install -e . pytest ruff
+        run: |
+          pip install uv
+          uv sync --locked
       - name: Validate application before publishing
         run: |
-          python -m pytest -q
-          ruff check .
+          uv run python -m pytest -q
+          uv run ruff check .
           node --test tests/*.test.mjs service/*.test.mjs
       - uses: actions/cache@v4
         with:
@@ -35,18 +37,18 @@ jobs:
           key: matches-${{ github.run_id }}
           restore-keys: matches-
       - name: Refresh completed matches
-        run: python scripts/export_pages.py
+        run: uv run python scripts/export_pages.py
       - uses: actions/cache@v4
         with:
           path: web/data/stories.json
           key: stories-v9-story2-${{ github.run_id }}
           restore-keys: stories-v9-story2-
       - name: Refresh evidence and preserve existing analyses
-        run: python scripts/generate_stories.py --provider groq --evidence-only
+        run: uv run python scripts/generate_stories.py --provider groq --evidence-only
       - name: Bind match inputs and AI evidence in one snapshot
-        run: python scripts/build_analysis_bundle.py
+        run: uv run python scripts/build_analysis_bundle.py
       - name: Fingerprint offline app and data
-        run: python scripts/build_service_worker.py
+        run: uv run python scripts/build_service_worker.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
