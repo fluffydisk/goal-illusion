@@ -90,3 +90,20 @@ içerir; tam şut listesi arayüzde korunur. Sağlayıcı kotası ve süre sın�
 Üç gerçek örnek için `GEMINI_API_KEY` (veya yedek `GROQ_API_KEY`) güvenli ortamda tanımlıyken kök dizinde
 `node scripts/check_ai_service.mjs` çalıştırın. İsteğe bağlı `MATCH_IDS` en fazla
 üç virgülle ayrılmış kimlik alır. Bu kontrol yayımlanmış önbelleği değiştirmez.
+
+## Türkçe / İngilizce
+
+`GET/POST /analysis/:id?lang=tr|en` dil seçer; parametre yoksa mevcut istemciler için
+Türkçe kullanılır. Desteklenmeyen dil 400 döndürür ve kaynak/kota işlemi başlatmaz.
+`/health` yanıtı `languages: ["tr", "en"]` içerir. İngilizce istemci bu yeteneği
+doğrulamadan POST yapmaz; eski Worker yanlışlıkla Türkçe iş başlatamaz.
+
+İş anahtarı istem sürümü, dil sözleşmesi sürümü, dil, maç ve veri parmak izini
+içerir. Diller ayrı iş ve yorum saklar; günlük ve istemci kotaları ortak kalır.
+Mevcut Türkçe hazır işler yeniden kullanılır; eski sürümde başlamış Türkçe işler
+tamamlanana kadar ikinci üretim başlatılmaz. Yeni anlatılarda `language` alanı vardır.
+İngilizce kanıt metinleri sayısal bulgulardan deterministik oluşturulur. Üretim ve
+bağımsız inceleme İngilizce talimat kullanır; yerel sayı/kanıt/iddia kontrolleri korunur.
+
+Bu özellik için Worker ve web kaynaklarını birlikte yayımla. Yerel testler gerçek
+model çağrısı yapmaz; sağlayıcıda İngilizce üretim ayrıca doğrulanmalıdır.

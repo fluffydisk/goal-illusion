@@ -3,52 +3,133 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Goal Illusion — Skor her şeyi anlatır mı?</title>
-<meta name="description" content="Süper Lig ve Bundesliga maçlarında skorun arkasındaki şut kalitesini keşfet. Şut bazlı xG ile olası skorlar, şut haritası ve maç analizi.">
-<meta name="theme-color" content="#0c171a">
+<meta name="description" content="Altı ligde tamamlanmış maçlarda skorun arkasındaki şut kalitesini keşfet. Şut bazlı xG ile olası skorlar, şut haritası ve maç analizi.">
+<meta name="theme-color" content="#152b46">
 <meta property="og:title" content="Goal Illusion — Skor her şeyi anlatır mı?">
-<meta property="og:description" content="Gerçek skor, xG ve aynı şutlardan oluşabilecek sonuçlar. Süper Lig ve Bundesliga için ücretsiz futbol analitiği.">
+<meta property="og:description" content="Gerçek skor, xG ve aynı şutlardan oluşabilecek sonuçlar. Altı lig için ücretsiz futbol analitiği.">
 <meta property="og:type" content="website"><meta name="twitter:card" content="summary">
-<link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=studio1">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=mvp7">
 </head>
 <body>
-<header><a class="brand" href="./">◉ GOAL ILLUSION</a><button id="share">Maçı paylaş ↗</button></header>
+<a class="skip-link" href="#analysis">Maç analizine geç</a>
+<header><div class="header-inner"><a class="brand" href="./"><span class="brand-icon" aria-hidden="true">◉</span> Goal Illusion</a><span class="header-sport">Futbol / Maç analizi</span><label class="language-label"><span class="sr-only">Language / Dil</span><select id="language" aria-label="Language / Dil"><option value="tr">Türkçe</option><option value="en">English</option></select></label><button id="share" type="button">Maçı paylaş ↗</button></div></header>
 <main>
-<div class="intro"><span class="eyebrow">SKORUN ARKASINDAKİ GERÇEK</span><h1>Skor her şeyi<br><em>anlatır mı?</em></h1><p>Şutların kalitesi, tabeladan farklı bir hikâye anlatabilir.<br>Bir maç seç. Aynı şutlardan oluşabilecek sonuçları keşfet.</p></div>
-<section class="selectors" aria-label="Maç seçimi"><label for="league">Lig<select aria-label="Lig" id="league"></select></label><label for="match">Maç<select aria-label="Maç" id="match"></select></label></section>
+<div class="page-heading"><div><h1>Maç analizi</h1><p>Tamamlanmış maçlar, şut kalitesi ve sonuç olasılıkları.</p></div><div class="page-tools"><span class="coverage-tag">Şut bazlı xG</span><label><span class="sr-only">Tema</span><select id="theme" aria-label="Tema"><option value="system">Sistem</option><option value="light">Açık</option><option value="dark">Koyu</option></select></label></div></div>
+<div class="app-layout">
+<aside class="match-browser" aria-label="Maç seçimi">
+<details id="match-picker" open><summary class="browser-heading"><span class="browser-title">Maçlar</span><span id="match-count"></span><span class="picker-action" aria-hidden="true">▾</span></summary>
+<div class="browser-filters">
+<label class="checkbox-label"><input id="favorites-only" type="checkbox">Favorilerim</label>
+<details id="favorite-management"><summary>Favori yönetimi</summary><p class="browser-note">Favoriler bu cihazda saklanır. JSON dosyasıyla başka cihazına taşıyabilirsin; içe aktarma mevcut favorileri silmez.</p><div id="favorite-actions" class="favorite-actions" hidden><button id="clear-favorites" type="button" hidden>Favorileri temizle</button><button id="undo-favorites" type="button" hidden>Geri al</button><button id="export-favorites" type="button">JSON yedek</button><label class="favorite-import" for="import-favorites">JSON içe aktar<input id="import-favorites" type="file" accept=".json,application/json" class="sr-only"></label></div></details><p id="favorite-action-status" class="preference-status" role="status"></p>
+<label for="league">Lig<select id="league"></select></label>
+<label for="team">Takım<select id="team"><option value="">Tüm takımlar</option></select></label>
+<label id="venue-filter" hidden for="venue">Saha<select id="venue"><option value="">İç saha ve deplasman</option><option value="home">İç saha</option><option value="away">Deplasman maçları</option></select></label>
+<label for="team-search">Takım ara<input id="team-search" type="search" placeholder="Takım veya rakip adı" autocomplete="off" aria-controls="match-list"></label>
+<label id="season-filter" hidden for="season">Sezon<select id="season"></select></label>
+<details class="date-filter"><summary>Tarih aralığı</summary><div class="date-fields"><label for="date-from">Başlangıç<input id="date-from" type="date"></label><label for="date-to">Bitiş<input id="date-to" type="date"></label></div></details>
+</div>
+<p id="filter-error" class="filter-error" role="status" hidden></p>
+<div class="list-heading"><span>Tamamlanan maçlar</span><button id="reset-filters" type="button" hidden>Filtreleri temizle</button></div>
+<p id="filter-summary" class="sr-only" role="status" aria-live="polite"></p>
+<p id="favorites-note" class="browser-note" hidden>Takım adının yanındaki yıldızla takımını, maç kartındaki yıldızla maçı kaydedebilirsin.</p>
+<p id="match-keyboard-help" class="sr-only">Maç listesinde yukarı/aşağı oklarla gezinebilir, Enter ile maçı açabilirsin.</p>
+<div id="match-list" class="match-list" role="region" aria-label="Maç listesi" aria-describedby="match-keyboard-help"></div>
+<div id="no-matches" class="empty-state" hidden><p>Bu filtrelerle maç bulunamadı.</p><button id="clear-search" type="button">Tüm maçları göster</button></div>
+<p id="coverage-summary" class="browser-note" hidden></p><a id="coverage-link" class="coverage-link" href="#data-coverage">Veri kapsamını incele</a>
+<p class="browser-note">Yalnızca şut verisi doğrulanmış maçlar listelenir.</p>
+</details>
+<select id="match" hidden aria-label="Seçili maç"></select>
+</aside>
+<div class="match-content">
+<p id="network-note" class="network-note" role="status" hidden></p>
+<p id="route-notice" class="muted" role="status" hidden></p>
 <p id="status" role="status">Maç verileri yükleniyor…</p>
-<div id="analysis" hidden>
+<details id="team-summary" class="panel team-summary" hidden open>
+<summary id="team-summary-title">Takım özeti</summary>
+<p class="muted">Özet seçili filtrelerdeki doğrulanmış maçlara dayanır. Kayıtlı maçlar tüm sezonu kapsamayabilir; form en yeniden eskiye gösterilir. Form skorlarında seçilen takım önce gösterilir.</p>
+<div id="team-summary-metrics" class="team-summary-metrics"></div>
+<p id="team-form-label" class="muted">Son 5 kayıtlı maç</p>
+<div id="team-form" class="team-form"></div>
+<details id="team-trend" hidden><summary>Maçlara göre xG</summary><p class="muted">Kaydedilmiş son 12 maç, eskiden yeniye. Noktadan maçı açabilirsin; eksik maçlar için değer üretilmez.</p><div class="legend"><span>● Üretilen xG</span><span>● Rakip xG</span></div><div id="team-trend-chart"></div></details>
+<div class="export-actions"><button id="export-team-csv" type="button">Takım maçları CSV</button></div><p id="team-export-status" class="muted" role="status"></p>
+<p id="team-summary-empty" class="muted" hidden>Bu filtrelerle takım özeti için maç bulunamadı.</p>
+</details>
+<div id="analysis" tabindex="-1" hidden>
+<nav class="match-stepper" aria-label="Filtrelenen maçlarda gezinme"><button id="newer-match" type="button">← Listedeki önceki maç</button><button id="older-match" type="button">Listedeki sonraki maç →</button></nav>
+<section class="scoreboard" aria-label="Maç sonucu"><div class="scoreboard-heading"><p id="competition"></p><div class="scoreboard-actions"><button id="save-match" type="button" aria-pressed="false">☆ Maçı kaydet</button><span class="match-status">Maç sonu</span></div></div><div class="scoreline"><div class="score-team"><span id="home-mark" class="team-mark" aria-hidden="true"></span><h2 id="home"></h2><button id="favorite-home" class="team-favorite" type="button" aria-pressed="false">☆</button><span>Ev sahibi</span></div><div class="score-center"><strong id="score"></strong><p id="date"></p></div><div class="score-team"><span id="away-mark" class="team-mark" aria-hidden="true"></span><h2 id="away"></h2><button id="favorite-away" class="team-favorite" type="button" aria-pressed="false">☆</button><span>Deplasman</span></div></div><nav class="analysis-nav" aria-label="Analiz bölümleri"><a href="#metrics">İstatistikler</a><a href="#shot-map">Şut haritası</a><a href="#story">AI yorumu</a><a id="compare-link" href="#comparison">Karşılaştır</a></nav></section>
+<div id="metrics" class="metrics"></div>
+<details id="comparison" class="panel comparison">
+<summary>Maç karşılaştırma</summary>
+<p class="muted">Seçili maçla başka bir kayıtlı maçın şut istatistiklerini yan yana incele. Olasılıklar gerçekleşen şutlara koşulludur; maç öncesi tahmin değildir.</p>
+<div class="comparison-controls"><label for="compare-search">Karşılaştırılacak takım veya rakip<input id="compare-search" type="search" placeholder="Takım veya rakip adı" autocomplete="off"></label><label for="compare-match">Karşılaştırılacak maç<select id="compare-match"></select></label></div>
+<p id="comparison-empty" class="muted" hidden>Bu aramayla karşılaştırılacak başka maç bulunamadı.</p>
+<div id="comparison-table" class="comparison-table"></div>
+<div class="export-actions"><button id="export-comparison" type="button" disabled>Karşılaştırma CSV</button></div><p id="comparison-export-status" class="muted" role="status"></p>
+<p id="comparison-model-note" class="muted" hidden>Bu maçların veri kaynakları farklıdır. xG modelleri doğrudan eşdeğer kabul edilmemelidir.</p>
+</details>
 <section id="story" class="story" aria-label="Maçın hikâyesi">
-<span class="eyebrow" id="story-label">MAÇIN HİKÂYESİ</span>
-<p id="story-match" class="story-match"></p><div class="cover-number" aria-hidden="true">90<span>DAKİKANIN ÖTESİ</span></div>
+<span class="eyebrow" id="story-label">AI MAÇ YORUMU</span>
+<p id="story-match" class="story-match" hidden></p>
 <h2 id="story-headline">Maçın şut verilerini keşfet.</h2>
 <p id="story-explanation"></p>
-<button id="open-story" type="button" hidden>Maçın hikâyesini aç ↗</button>
+<button id="open-story" type="button" hidden>AI yorumunu oku →</button>
 <div id="ai-controls" hidden>
-<button id="generate-ai" type="button">AI Review oluştur</button>
-<div id="ai-progress" class="ai-progress" hidden role="region" aria-label="AI Review hazırlanıyor">
-<div class="creation-topline"><span class="creation-badge"><i aria-hidden="true"></i> HİKÂYE STÜDYOSU</span><span id="ai-elapsed" class="creation-time"></span></div>
-<div class="creation-art" aria-hidden="true"><div class="creation-orbit"></div><div class="creation-card card-back"></div><div class="creation-card card-front"><span>AI</span><i></i><i></i><i></i><b>✦</b></div></div>
-<div class="creation-copy"><span class="eyebrow">SKORUN ÖTESİNDE</span><h3 id="ai-phase" role="status" aria-live="polite"></h3><p id="ai-estimate"></p></div>
+<button id="generate-ai" type="button">AI yorumu oluştur</button>
+<div id="ai-progress" class="ai-progress" hidden role="region" aria-label="AI yorumu hazırlanıyor">
+<div class="creation-topline"><span class="creation-badge"><i aria-hidden="true"></i> AI YORUMU</span><span id="ai-elapsed" class="creation-time"></span></div>
+<div class="creation-copy"><h3 id="ai-phase" role="status" aria-live="polite"></h3><p id="ai-estimate"></p></div>
 <ol class="ai-steps" aria-label="Üretim aşamaları"><li data-stage="queued"><span>01</span>Sıra</li><li data-stage="generating"><span>02</span>Yazım</li><li data-stage="reviewing"><span>03</span>Kontrol</li><li data-stage="ready"><span>04</span>Hazır</li></ol>
 <div id="waiting-facts" hidden><div class="fact-topline"><span class="eyebrow">MAÇTAN BİR BULGU</span><span id="waiting-count"></span></div><p id="waiting-fact"></p><div class="fact-footer"><span>Doğrulanmış veri · AI yorumu değil</span><button id="next-fact" type="button" aria-label="Sonraki maç bulgusu">Sonraki ↗</button></div></div>
-<p class="creation-assurance">Bu sayfada beklemene gerek yok. Hikâyen burada saklanacak.</p>
+<p class="creation-assurance">Yorum hazır olduğunda bu maçta saklanır; sayfada beklemen gerekmez.</p>
 </div>
 <p id="ai-message" class="muted"></p>
 </div>
-<div class="story-chapters"><span>01 / Maçın akışı</span><span>02 / Önemli fırsatlar</span><span>03 / AI değerlendirmesi</span></div>
+
 <p class="story-note" id="story-note"></p>
-<a href="#metrics">Detaylı analize geç ↓</a>
+
 </section>
-<section class="scoreboard"><p id="competition" class="eyebrow"></p><div class="scoreline"><h2 id="home"></h2><strong id="score"></strong><h2 id="away"></h2></div><p id="date"></p></section>
-<div id="metrics" class="metrics"></div>
-<details class="panel"><summary>Tüm analiz bulguları</summary><div id="all-evidence" class="evidence-grid"></div></details>
+<details id="analysis-evidence" class="panel"><summary>Tüm analiz bulguları</summary><div id="all-evidence" class="evidence-grid"></div></details>
 <section class="panel"><h2>Aynı şutlar, olası sonuçlar</h2><p class="muted">Her şutun xG değerinden hesaplanan tam olasılık dağılımı.</p><div id="outcomes"></div><p id="insight" class="insight"></p></section>
 <div class="grid"><section class="panel"><h2>Olası skorlar</h2><div id="heatmap" class="heatmap"></div><p id="tail" class="muted"></p></section><section class="panel"><h2>En olası 5 skor</h2><div id="top"></div></section></div>
-<section class="panel"><h2>Şut haritası</h2><p class="muted">İki takım da sağdaki kaleye hücum edecek şekilde gösterilir. Büyük daire = yüksek xG · ★ = gol. Şuta dokunarak detayını gör.</p><div id="legend" class="legend"></div><div id="pitch"></div><p id="shot-detail" role="status">Bir şut seç.</p></section>
-<section class="panel"><h2>Maç boyunca xG</h2><p class="muted">Devre araları çıkarılır, ek süreler korunur.</p><div id="timeline"></div></section>
+<section id="shot-map" class="panel"><h2>Şut haritası</h2><p class="muted">Ev sahibi sağ, deplasman sol kaleye hücum eder. Yönler tüm devrelerde sabittir. Büyük daire = yüksek xG · ★ = gol. Şuta dokunarak detayını gör.</p><div class="shot-filters">
+<label for="shot-team">Takım<select id="shot-team"></select></label>
+<label for="shot-period">Devre<select id="shot-period"></select></label>
+<label for="shot-outcome">Şut türü<select id="shot-outcome"><option value="">Tüm şutlar</option><option value="goals">Goller</option><option value="highxg">Yüksek xG (≥ 0,30)</option></select></label>
+<label for="shot-player">Oyuncu<select id="shot-player"></select></label>
+</div>
+<p id="shot-summary" class="muted" role="status"></p>
+<p id="shot-keyboard-help" class="sr-only">Şut haritasında sol/sağ oklarla şutlar arasında gezinebilir, Enter ile detayını açabilirsin.</p>
+<div id="legend" class="legend"></div><div id="pitch"></div><p id="shot-detail" role="status">Bir şut seç.</p>
+<details id="shot-events"><summary>Şut listesi</summary><label class="shot-sort" for="shot-sort">Sıralama<select id="shot-sort"><option value="time">Dakika</option><option value="quality">xG: yüksekten düşüğe</option></select></label><div id="shot-table" class="shot-table"></div></details>
+<p class="muted">Filtreler haritayı ve şut listesini değiştirir; ana istatistikler tüm şutları içerir. Kendi kalesine goller şut listesinde yer almaz.</p></section>
+<section class="panel"><h2>Maç boyunca xG</h2><p class="muted">Devre araları çıkarılır, ek süreler korunur.</p><div id="timeline"></div>
+<details id="goals-panel"><summary>Kayıtlı şut golleri</summary><div id="goal-events" class="goal-events"></div><p id="goal-events-empty" class="muted" hidden>Kayıtlı şut golü yok.</p><p id="goal-own-note" class="muted" hidden>Kendi kalesine goller skora dahildir; şut golü listesinde yer almaz. Kaynakta zamanı veya konumu yoksa gösterilmez.</p></details>
+</section>
 <p id="warnings" class="warning"></p>
 <details class="panel"><summary>Nasıl hesaplanıyor?</summary><p>Her şutun xG değerini gol olma olasılığı sayıyoruz. Bağımsız Bernoulli denemelerinden takım başına Poisson-binomial dağılımı; iki dağılımın dış çarpımından olası skorlar hesaplanır. Rastgele simülasyon kullanılmaz.</p><p>Bu analiz gerçekleşmiş şutlara koşulludur; maç öncesi tahmin veya kesin bir “hak edilen skor” değildir. Ribaundlar, pozisyon bağımlılığı ve skorla değişen taktikler modelde yoktur. Tek bir skorun düşük olasılığı tek başına şans ölçüsü değildir. Seri penaltılar hariçtir; kendi kalesine goller sabit katkı olarak eklenir.</p></details>
+<details id="data-coverage" class="panel"><summary>Veri kapsamı</summary>
+<p class="muted">Yalnızca skor ve şut kontrollerinden geçen maçlar gösterilir. Eksik veya tutarsız maçların verisi uydurulmaz. Kaynaktaki tamamlanmış maç sayısı son veri güncellemesine aittir.</p>
+<p id="coverage-updated" class="muted"></p>
+<div class="coverage-table"><table><caption class="sr-only">Liglere göre doğrulanmış maç kapsamı</caption><thead><tr><th scope="col">Lig</th><th scope="col">Sezon</th><th scope="col">Doğrulanmış</th><th scope="col">Kaynakta biten</th><th scope="col">Durum</th></tr></thead><tbody id="coverage-rows"></tbody></table></div>
+<p id="coverage-unavailable" class="muted" hidden>Bu veri paketinde ayrıntılı kapsam bilgisi bulunmuyor.</p>
+</details>
+<details id="offline-help" class="panel"><summary>Çevrimdışı kullanım</summary><p class="muted">İnternet varken yüklenen doğrulanmış maçları daha sonra bu cihazda inceleyebilirsin. Çevrimdışı veri yeni maçları veya son düzeltmeleri içermez; veri güncelleme tarihini kontrol et. Yeni AI yorumu için internet gerekir.</p><p id="pwa-status" class="muted"></p><button id="install-app" type="button" hidden>Uygulamayı ekle</button></details>
+<details id="glossary" class="panel"><summary>xG ve istatistik rehberi</summary>
+<dl class="glossary">
+<dt>xG nedir?</dt><dd>Bir şutun gol olma olasılığı için veri kaynağının verdiği değerdir. Örneğin 0,20 xG, modelde o şut için %20 gol olasılığı demektir. Maçın toplam xG'si şut değerlerinin toplamıdır; kesin gol sayısı değildir.</dd>
+<dt>Şut başına xG</dt><dd>Toplam xG'nin şut sayısına bölünmesidir. Ortalama şut kalitesini anlatır; toplam oyun performansını ölçmez. Şut yoksa ortalama tanımsızdır.</dd>
+<dt>Gerçek skorun olasılığı</dt><dd>Kaydedilmiş şutlar aynı xG değerleriyle bağımsız olarak tekrarlansaydı, tek bir tam skorun olasılığıdır. Düşük olması tek başına şans veya beceri ölçüsü değildir.</dd>
+<dt>Galibiyet ve beraberlik olasılığı</dt><dd>Olası skorların ilgili sonuçlara göre toplanmasıdır. Yalnızca gerçekleşmiş şutlara koşulludur; maç öncesi tahmin değildir.</dd>
+<dt>Kendi kalesine goller ve penaltılar</dt><dd>Kendi kalesine goller sabit skor katkısıdır ve xG toplamına girmez. Maç içindeki penaltı şutları dahildir; seri penaltılar hariçtir. Varsa uzatma devreleri analize dahildir.</dd>
+<dt>Şut haritasındaki yönler</dt><dd>Ev sahibi sağ, deplasman sol kaleye hücum edecek biçimde çizilir. Yönler devreler arasında değişmez; bu, karşılaştırma için kullanılan sabit bir gösterimdir.</dd>
+</dl></details>
+<details id="data-export" class="panel"><summary>Analiz verisini indir</summary>
+<p class="muted">Dosyalar seçili maçın tüm şutlarını ve sayısal analizini içerir; görünüm filtrelerinden etkilenmez. JSON ham şut verisini, modeli ve kaynak bilgilerini korur. CSV virgülle ayrılır ve ondalıklar noktayla yazılır.</p>
+<div class="export-actions"><button id="export-json" type="button">Analiz JSON</button><button id="export-shots" type="button">Şutlar CSV</button><button id="export-summary" type="button">Özet CSV</button></div>
+<p id="export-status" class="muted" role="status"></p>
+</details>
 <footer><p id="source"></p><img id="statsbomb" src="statsbomb-logo.png" alt="StatsBomb" width="130" hidden><p id="updated"></p><p>Güncel sezon maçları düzenli veri güncellemeleriyle eklenir. Kaynakta eksik xG bulunan maçlar analiz edilmez. FotMob ve StatsBomb ile resmi bağlantımız yoktur.</p><a id="repo" hidden>GitHub’da projeyi incele ↗</a></footer>
 </div>
-</main><script type="module" src="app.mjs?v=studio1"></script>
+</div></div></main><script type="module" src="app.mjs?v=mvp7"></script>
+<nav class="mobile-nav" aria-label="Mobil gezinme"><button id="mobile-matches" type="button" aria-controls="match-picker" aria-expanded="false">Maçlar</button><a href="#metrics">İstatistikler</a><a href="#shot-map">Şut haritası</a></nav>
 </body></html>

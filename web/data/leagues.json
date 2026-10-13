@@ -1,0 +1,8 @@
+[
+  {"id":71,"name":"Süper Lig","country":{"tr":"Türkiye","en":"Türkiye"},"source_slug":"super-lig"},
+  {"id":54,"name":"Bundesliga","country":{"tr":"Almanya","en":"Germany"},"source_slug":"bundesliga"},
+  {"id":47,"name":"Premier League","country":{"tr":"İngiltere","en":"England"},"source_slug":"premier-league"},
+  {"id":87,"name":"LaLiga","country":{"tr":"İspanya","en":"Spain"},"source_slug":"laliga"},
+  {"id":55,"name":"Serie A","country":{"tr":"İtalya","en":"Italy"},"source_slug":"serie"},
+  {"id":53,"name":"Ligue 1","country":{"tr":"Fransa","en":"France"},"source_slug":"ligue-1"}
+]

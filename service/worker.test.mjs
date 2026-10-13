@@ -214,3 +214,42 @@ test('repair receives the rejected draft and concrete feedback',async()=>{
  assert.deepEqual(JSON.parse(seen.find(m=>m.role==='assistant').content),bad);
  assert.match(seen.at(-1).content,/kaleci/);
 });
+
+const english={headline:'Similar chances produced a different scoreline',summary:'The two teams created similar total expected goals from their recorded shots.',cards:item.facts.sections.map(type=>({type,title:'The recorded chances in this match',text:'The two teams created similar total expected goals from their recorded shots. The actual score is one of the possible outcomes conditional on those shots.',evidence_ids:['chances','outcomes']}))};
+test('language jobs are separate, deduplicate independently and share quota',async()=>{
+ const {queue,storage,request}=setup();
+ const en=(method='POST')=>new Request('https://internal/analysis/1?lang=en',{method,headers:{'X-Client':'test'}});
+ await queue.fetch(request());await queue.fetch(en());await queue.fetch(en());
+ const keys=await storage.get('queue');assert.equal(keys.length,2);assert.equal((await storage.get('quota')).count,2);
+ assert.equal((await storage.get(keys[0])).language,'tr');assert.equal((await storage.get(keys[1])).language,'en');
+ queue.complete=async(messages,_,name)=>name==='factual_review'?{approved:true,reason:'Supported.'}:messages[0].content.includes('English football analyst')?english:valid;
+ for(let i=0;i<4;i++)await queue.alarm();
+ const tr=await(await queue.fetch(request('GET'))).json(),englishReady=await(await queue.fetch(en('GET'))).json();
+ assert.equal(tr.narrative.language,'tr');assert.equal(englishReady.narrative.language,'en');assert.equal(englishReady.narrative.headline,english.headline);
+});
+test('English has an independent English review, and rejection prevents publication',async()=>{
+ const {queue}=setup();await queue.fetch(new Request('https://internal/analysis/1?lang=en',{method:'POST'}));let reviews=0;
+ queue.complete=async(messages,_,name)=>{
+  if(name==='match_story'){assert.match(messages[0].content,/English football analyst/);assert.ok(!messages[1].content.includes('Üretilen fırsatların'));return english;}
+  assert.match(messages[0].content,/English football stories/);reviews++;return {approved:false,reason:'Swapped teams.'};
+ };
+ for(let i=0;i<4;i++)await queue.alarm();
+ const result=await(await queue.fetch(new Request('https://internal/analysis/1?lang=en'))).json();
+ assert.equal(result.status,'failed');assert.equal(result.narrative,undefined);assert.equal(reviews,2);assert.match(result.error,/quality checks/);
+});
+test('unsupported languages are rejected before source retrieval and quota',async()=>{
+ const {queue,storage}=setup();queue.facts=()=>assert.fail('Must not load source');
+ assert.equal((await queue.fetch(new Request('https://internal/analysis/1?lang=de',{method:'POST'}))).status,400);assert.equal(await storage.get('quota'),undefined);
+});
+test('English prose rejects fabricated numbers, unsupported claims and Turkish cards',()=>{
+ assert.doesNotThrow(()=>validateProse(english,item.facts,item.model_facts,'en'));
+ for(const text of ['The team used pressing and tactics to win this match. This explains the recorded final score.','There were 99999 shots in this match. The actual score followed these recorded chances.','Takımların şut kaliteleri birbirine yakın kaldı. Gerçek skor ise aynı şutlarla oluşabilecek sonuçlardan yalnızca biri.']) {
+  const bad=structuredClone(english);bad.cards.at(-1).text=text;assert.throws(()=>validateProse(bad,item.facts,item.model_facts,'en'));
+ }
+});
+test('existing Turkish cached commentary survives language-aware keys',async()=>{
+ const {queue,storage,request}=setup();
+ await storage.put(`job:v${contract.prompt_version}:1:${item.facts.fingerprint}`,{status:'ready',prompt_version:contract.prompt_version,fingerprint:item.facts.fingerprint,narrative:{...valid,prompt_version:contract.prompt_version,story_version:2,fingerprint:item.facts.fingerprint}});
+ assert.equal((await(await queue.fetch(request('GET'))).json()).status,'ready');assert.equal(await storage.get('quota'),undefined);
+ assert.equal((await(await queue.fetch(new Request('https://internal/analysis/1?lang=en'))).json()).status,'missing');
+});

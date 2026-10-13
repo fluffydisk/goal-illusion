@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
+const records=JSON.parse(readFileSync('web/data/analysis.json')).snapshot.matches;
+const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
+try {
+ const context=await browser.newContext({viewport:{width:1280,height:1000}}),page=await context.newPage(),errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await context.route('**/analysis/*',r=>r.fulfill({json:{status:'missing'}}));
+ await context.route('**/health',r=>r.fulfill({json:{languages:['tr','en']}}));
+ await page.goto(`http://127.0.0.1:8765/?lang=tr&match=${records[0].match.id}&offline=1`);
+ await page.waitForFunction(()=>document.getElementById('pwa-status').textContent.includes('çevrimdışı kullanılabilir'),{},{timeout:45000});
+ await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
+ assert.ok(await page.evaluate(async()=> (await caches.keys()).some(k=>k.startsWith('goal-illusion-'))));
+ const score=await page.locator('#score').innerText();
+ await context.setOffline(true);await page.reload();await page.locator('#analysis').waitFor();
+ assert.equal(await page.locator('#score').innerText(),score);
+ assert.match(await page.locator('#network-note').innerText(),/Çevrimdışısın|ağdan yenilenemedi/);
+ assert.equal(await page.locator('#generate-ai').isDisabled(),true);
+ await page.locator('#language').selectOption('en');
+ assert.match(await page.locator('#network-note').innerText(),/offline|could not be refreshed/);
+ await page.locator('#offline-help summary').click();assert.match(await page.locator('#pwa-status').innerText(),/available offline/);
+ await page.locator('#theme').selectOption('dark');await page.setViewportSize({width:320,height:844});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ await page.goto(`http://127.0.0.1:8765/?lang=en&match=${records[1].match.id}&offline=1`);
+ await page.locator('#analysis').waitFor();assert.equal(await page.locator('#match').inputValue(),String(records[1].match.id));
+ assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'dark');
+ await context.setOffline(false);await page.reload();await page.locator('#analysis').waitFor();
+ assert.equal(await page.locator('#network-note').isVisible(),false);
+ assert.deepEqual(errors,[]);console.log('PASS verified cache install, offline reload/navigation, AI disabled, TR/EN, dark/320px, online recovery');
+} finally {await browser.close();}

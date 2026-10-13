@@ -1,8 +1,9 @@
 # Goal Illusion ⚽
 
 **Skor her şeyi anlatır mı?** Gerçek bir maçın şutlarını alır, xG değerlerinden olası
-skorları hesaplar ve maç sonucunu bu dağılımla karşılaştırır. Türkçe Streamlit paneli;
-Ziyaretçiler için API anahtarı veya hesap gerekmez. AI yorumlarının üretimi için geliştirici tarafında ücretsiz Groq hesabı gerekir.
+skorları hesaplar ve maç sonucunu bu dağılımla karşılaştırır. Türkçe/İngilizce web
+arayüzü ve yerel Streamlit paneli sunar. Ziyaretçiler için API anahtarı veya hesap
+gerekmez. AI yorumları geliştirici tarafından yapılandırılan üretim servisini kullanır.
 
 ## Çalıştırma
 
@@ -18,7 +19,7 @@ Tarayıcıda `http://localhost:8501` açılır. İlk ekran internet gerektirmeye
 **İngiltere–Senegal, 3–0 (4 Aralık 2022)** örneğidir. İlk kurulum için internet gerekir;
 kurulumdan sonra örnek maç için gerekmez.
 
-**Güncel Süper Lig ve Bundesliga:** Sol menüden **FotMob · güncel ligler** seç.
+**Güncel Süper Lig, Bundesliga, Premier League, LaLiga, Serie A ve Ligue 1:** Sol menüden **FotMob · güncel ligler** seç.
 Lig ve sezon seçildiğinde bitmiş maçlar en yeniden eskiye listelenir. Sezon listesi
 kaynaktan gelir; her yıl kodda değişiklik yapmak gerekmez. **Veriyi yenile / tekrar dene**
 düğmesi en yeni tamamlanmış maçları almak için önbelleği temizler. API anahtarı ve ödeme
@@ -120,7 +121,7 @@ maç analizi yapar. Maç bağlantıları `?match=ID` ile paylaşılabilir. Şut 
 Poisson-binomial hesabı tarayıcıda yapılır; aynı gerçek maçlar üzerinde Python sonucu
 ile karşılaştırılarak doğrulanır.
 
-Pages sürümü çevrimdışı örneği ve Süper Lig/Bundesliga’nın güncel sezonundaki
+Pages sürümü çevrimdışı örneği ve desteklenen altı ligin güncel sezonundaki
 **verisi doğrulanabilen tamamlanmış maçlarını** içerir. Streamlit sürümü ayrıca eski
 sezonları ve StatsBomb kataloğunu talep üzerine getirir.
 
@@ -132,16 +133,67 @@ GitHub zamanlanmış işleri gecikebilir; etkinliği olmayan herkese açık depo
 sonra devre dışı kalabilir. Actions sekmesinden tekrar etkinleştirilebilir.
 [GitHub zamanlanmış iş belgeleri](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 
+Web arayüzünde lig ve takım filtreleri, Türkçe karakterlere toleranslı takım/rakip
+araması ve tarihlere göre maç listesi bulunur. Masaüstünde maç listesi analizin yanında,
+mobilde açılır seçim panelindedir. Filtreleme açık maçın analizini değiştirmez; başka
+bir maç satırına basıldığında analiz ve paylaşım bağlantısı güncellenir.
+Skor ve xG metrikleri önce, AI yorumu bunların altında gösterilir.
+Üst çubuktan Türkçe/İngilizce seçilebilir. URL'deki `lang=tr` / `lang=en`
+parametresi saklanan tercihten ve tarayıcı dilinden önce gelir. Sayılar, tarihler,
+kanıtlar ve AI yorumları seçilen dilde gösterilir; dillerin AI işleri ve önbellekleri
+ayrıdır. Şut haritasında ev sahibi sağ, deplasman sol kaleye hücum eder;
+deplasmanın hem şutları hem gol yıldızları döndürülür. Ham veri ve xG değişmez.
+Altı lig aynı `web/data/leagues.json` kataloğundan beslenir. İlk arşiv dolumu
+kademelidir; güncelleme lig başına en fazla 12 maç detay isteği yapar. Doğrulanmış
+geçmiş korunur, son üç günün kayıtları düzeltmeler için sırayla yenilenir. Kapsam ve
+kaynak kesintisi seçicide belirtilir; eksik/skorla tutarsız maçlar uydurulmaz.
+Favori takım ve maçlar cihazda saklanır. Tüm ligler, sezon ve tarih aralığı filtreleri
+birlikte kullanılabilir. Açık/koyu/sistem tema seçimi de cihazda korunur.
+Şut haritası takım, oyuncu, devre ve sonuç filtresi; şut listesi dakika/xG sıralaması
+sunar. Bu filtreler maçın hesaplanan toplamlarını değiştirmez.
+Takım seçildiğinde filtrelenmiş kayıtlı maçlardan G/B/M, gol toplamları, maç başına
+xG ve son beş sonuç gösterilir; form kartından maç açılabilir. İç saha/deplasman
+filtresi özete de uygulanır. Son 12 kayıtlı maçın üretilen/rakip xG eğrisi ve seçili
+takımın filtrelenmiş maçları için CSV bulunur. Bu özet tüm sezonu kapsadığı iddiasında
+bulunmaz. Kalan işler `MVP_TODO.md` dosyasındadır.
+
+İki maçın istatistikleri yan yana karşılaştırılabilir; `?match=ID&compare=ID&lang=en`
+bağlantısı seçimi korur. Analiz JSON, tüm şutlar CSV ve iki takımın sayısal özet CSV'si
+indirilebilir. Karşılaştırma paneli ayrıca iki maçın dört takım satırını tek CSV
+dosyasında sunar. İndirmeler harita filtrelerinden etkilenmez; kaynak, xG modeli ve
+kendi kalesine gol katkıları korunur. CSV UTF-8 BOM, virgül ve noktalı ondalık kullanır;
+metin hücreleri formül olarak çalıştırılmaya karşı kaçırılır.
+
+Favori tercihler açık sekmeler arasında eşitlenir. Temizlemeyi geri alma ve doğrulanan
+JSON yedeğiyle cihazlar arası taşıma vardır; içe aktarma mevcut seçimlerle birleşir.
+Gollerin şut listesi haritada ilgili pozisyonu açar; konumu/zamanı olmayan kendi
+kalesine goller için veri uydurulmaz. xG rehberi, lig bazında kapsam/kaynak tablosu,
+klavyeyle şut ve maç gezinmesi, geri/ileri geçmişi ve mobil alt gezinme çubuğu bulunur.
+Filtrelenen listedeki önceki/sonraki maça doğrudan geçiş düğmeleri seçimleri korur.
+
+HTTPS yayında destekleyen tarayıcılar doğrulanmış statik uygulama/veri sürümünü
+çevrimdışı saklar. Başarılı ilk yüklemeden sonra kayıtlı maçlar internetsiz açılır;
+veri tarihi kontrol edilmelidir. Kaydedilmiş paketle açılışta yeni AI üretimi kapalıdır;
+internet geri geldiğinde sayfayı yenileyerek güncel paketi yükle. Yeni sürüm bütün
+varlıklarının SHA-256 kontrolünden sonra etkinleşir; başarısız kurulum eski sürümü
+korur. Destekleyen tarayıcılarda uygulama ekleme düğmesi görünür. Yerel önizlemede
+service worker varsayılan kapalıdır; çevrimdışı test için `?offline=1` kullanılır.
+
 Yerel Pages önizlemesi ve kontroller:
 
 ```bash
 uv run python scripts/export_pages.py
 uv run python scripts/generate_stories.py --provider groq --evidence-only
 uv run python scripts/build_analysis_bundle.py
+uv run python scripts/build_service_worker.py
 uv run python -m http.server 8502 --directory web
-node --test tests/pages_math.test.mjs
-node tests/analysis_data.test.mjs
+node --test tests/*.test.mjs service/*.test.mjs
 ```
+
+UI kontrolleri `scripts/check_*_ui.mjs` dosyalarındadır; Playwright ve Chromium kullanır.
+`PLAYWRIGHT_MODULE` ile modülün konumu belirtilebilir. AI yanıtları bu testlerde
+sentetiktir; gerçek model üretimi başlatılmaz. Web dosyaları veya analiz paketi
+değiştirildikten sonra `build_service_worker.py` yeniden çalıştırılmalıdır.
 
 Pages ve AI servisi, maç şutlarını ve doğrulanmış bulguları aynı `analysis.json`
 paketinden okur. Paket oluşturulurken her maçın veri parmak izi kontrol edilir.
@@ -221,7 +273,7 @@ sürümleri eşleşen yeni hikâyeler yalnızca kullanıcı butona bastığında
 
 ### Story deneyimi
 
-**AI Review oluştur** ilk üretimi başlatır; hazır olduğunda **Maçın hikâyesini aç**
+**AI yorumu oluştur** ilk üretimi başlatır; hazır olduğunda **AI yorumunu oku**
 butonu görünür. Mobilde tam ekran, masaüstünde odaklı bir pencere açılır. Kartlar
 metin uzunluğuna göre 10–25 saniyede ilerler; ok tuşları, dokunma ve yatay kaydırma
 da desteklenir. Duraklatma, açık kanıt detayı veya gizli sekme ilerlemeyi durdurur.
@@ -234,6 +286,10 @@ Görsel test (Playwright modülü ve Chromium kurulu ortamda):
 python -m http.server 8765 --bind 127.0.0.1 --directory web
 # Ayrı terminal; PLAYWRIGHT_MODULE gerekirse kurulu modülün mutlak yoludur.
 node scripts/check_story_ui.mjs
+node scripts/check_match_browser_ui.mjs
+node scripts/check_locale_pitch_ui.mjs
+node scripts/check_mvp_features_ui.mjs
+node scripts/check_team_summary_ui.mjs
 ```
 
 Bu test AI servisini taklit eder, üretim yapmaz ve `/tmp/story-*.png` görsellerini

@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
+const bundle=JSON.parse(readFileSync('web/data/analysis.json'));
+const record=bundle.snapshot.matches.find(d=>d.league_id===47&&d.shots.some(s=>s.outcome==='Goal'));
+const base=process.env.STORY_BASE_URL||'http://127.0.0.1:8765';
+const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
+try {
+ const context=await browser.newContext({colorScheme:'light'}),page=await context.newPage({viewport:{width:1360,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/analysis/*',r=>r.fulfill({json:{status:'missing'}}));
+ await page.goto(`${base}/?lang=tr&match=${record.match.id}`);await page.locator('#analysis').waitFor();
+ assert.equal(await page.locator('#league').inputValue(),'47');
+ for(const id of ['47','87','55','53'])assert.equal(await page.locator(`#league option[value="${id}"]`).count(),1);
+ const metrics=await page.locator('#metrics').innerText();
+ await page.locator('#favorite-home').click();assert.equal(await page.locator('#favorite-home').getAttribute('aria-pressed'),'true');
+ await page.locator('#favorites-only').check();const teamRows=await page.locator('.match-row').count();assert.ok(teamRows>0);
+ await page.reload();await page.locator('#analysis').waitFor();assert.equal(await page.locator('#favorite-home').getAttribute('aria-pressed'),'true');
+ await page.locator('#save-match').click();assert.equal(await page.locator('#save-match').getAttribute('aria-pressed'),'true');
+ await page.locator('#favorite-home').click();await page.locator('#favorites-only').check();assert.equal(await page.locator('.match-row').count(),1);
+ await page.locator('.match-save').click();assert.equal(await page.locator('.match-row').count(),0);assert.equal(await page.locator('#no-matches').isVisible(),true);
+ await page.locator('#clear-search').click();await page.locator('#league').selectOption('all');
+ assert.equal(await page.locator('.match-row').count(),bundle.snapshot.matches.length);
+ assert.equal(await page.locator('#season-filter').isVisible(),true);
+ await page.locator('#season').selectOption('2022');assert.equal(await page.locator('.match-row').count(),1);
+ await page.locator('#reset-filters').click();await page.locator('.date-filter summary').click();
+ await page.locator('#date-from').fill('2026-10-11');await page.locator('#date-to').fill('2026-10-10');await page.locator('#date-to').dispatchEvent('change');
+ assert.equal(await page.locator('#filter-error').isVisible(),true);assert.equal(await page.locator('.match-row').count(),0);
+ await page.locator('#reset-filters').click();
+ // Return to the direct linked match for shot controls.
+ await page.goto(`${base}/?lang=tr&match=${record.match.id}`);await page.locator('#analysis').waitFor();
+ const baseline=await page.locator('#metrics').innerText();assert.equal(baseline,metrics);
+ await page.locator('#shot-outcome').selectOption('goals');
+ assert.equal(await page.locator('#pitch .shot').count(),record.shots.filter(s=>s.outcome==='Goal'&&s.x!==null&&s.y!==null).length);
+ assert.equal(await page.locator('#metrics').innerText(),baseline);
+ await page.locator('#shot-team').selectOption('away');assert.equal(await page.locator('#pitch .shot[data-team=home]').count(),0);
+ await page.locator('#shot-events summary').click();await page.locator('#shot-sort').selectOption('quality');
+ const count=await page.locator('#shot-table tbody tr').count();if(count)await page.locator('#shot-table button').first().click();
+ await page.locator('#shot-team').selectOption('');await page.locator('#shot-outcome').selectOption('');
+ await page.locator('#theme').selectOption('dark');assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
+ await page.screenshot({path:'/tmp/football-mvp-dark.png',fullPage:true});
+ await page.reload();await page.locator('#analysis').waitFor();assert.equal(await page.locator('#theme').inputValue(),'dark');
+ await page.locator('#theme').selectOption('system');await page.emulateMedia({colorScheme:'light'});assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
+ await page.emulateMedia({colorScheme:'dark'});await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
+ await page.setViewportSize({width:320,height:844});await page.locator('#language').selectOption('en');
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ await page.screenshot({path:'/tmp/football-mvp-mobile.png',fullPage:true});
+ assert.deepEqual(errors,[]);
+ // Blocked storage keeps local session favorites and language/theme controls operational.
+ const denied=await browser.newContext(),blocked=await denied.newPage();await blocked.addInitScript(()=>Object.defineProperty(window,'localStorage',{get(){throw new DOMException('denied','SecurityError');}}));
+ await blocked.route('**/analysis/*',r=>r.fulfill({json:{status:'missing'}}));await blocked.goto(`${base}/?lang=tr&match=${record.match.id}`);await blocked.locator('#analysis').waitFor();await blocked.locator('#favorite-home').click();assert.equal(await blocked.locator('#favorite-home').getAttribute('aria-pressed'),'true');await denied.close();
+ console.log('PASS four new leagues, persistent team/match favorites, favorites empty/reset, all leagues, seasons, date validation, shot filters/list with unchanged xG, persisted/system dark theme, blocked storage, 320px EN');
+} finally {await browser.close();}

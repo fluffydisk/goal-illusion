@@ -1,7 +1,9 @@
 """FotMob'un halka açık web JSON'u; hesap veya imzalı başlık gerektirmez."""
 
+import json
 from datetime import datetime
 from math import isfinite
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import requests
@@ -9,7 +11,10 @@ import requests
 from goal_illusion.data import DataError, Match, MatchData, Shot
 
 BASE_URL = "https://www.fotmob.com/api/data"
-LEAGUES = {"Süper Lig · Türkiye": 71, "Bundesliga · Almanya": 54}
+LEAGUE_CATALOG = json.loads(
+    (Path(__file__).resolve().parents[1] / "web/data/leagues.json").read_text()
+)
+LEAGUES = {f"{league['name']} · {league['country']['tr']}": league["id"] for league in LEAGUE_CATALOG}
 PERIODS = {"FirstHalf": 1, "SecondHalf": 2, "ExtraFirstHalf": 3, "ExtraSecondHalf": 4}
 START_MINUTES = {1: 0, 2: 45, 3: 90, 4: 105}
 PERIOD_LENGTHS = {1: 45, 2: 45, 3: 15, 4: 15}

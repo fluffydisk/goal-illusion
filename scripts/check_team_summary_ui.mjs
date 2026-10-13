@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {summarizeTeam} from '../web/team-summary.mjs';
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
+const bundle=JSON.parse(readFileSync('web/data/analysis.json'));
+const record=bundle.snapshot.matches.find(d=>d.league_id===47);
+const key=`${record.source_name}:${record.match.home_id}`;
+const records=bundle.snapshot.matches.filter(d=>d.league_id===47);
+const expected=summarizeTeam(records,key);
+const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
+try {
+ const page=await browser.newPage({viewport:{width:1280,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/analysis/*',r=>r.fulfill({json:{status:'missing'}}));await page.route('**/health',r=>r.fulfill({json:{languages:['tr','en']}}));
+ await page.goto(`http://127.0.0.1:8765/?lang=tr&match=${record.match.id}`);await page.locator('#analysis').waitFor();
+ assert.equal(await page.locator('#team-summary').isHidden(),true);
+ await page.locator('#team').selectOption(key);
+ assert.equal(await page.locator('#team-summary').isVisible(),true);
+ assert.equal(await page.locator('#team-summary-title').innerText(),`${expected.name} · ${expected.matches} kayıtlı maç`);
+ assert.equal(await page.locator('#team-form button').count(),Math.min(5,expected.matches));
+ await page.locator('#venue').selectOption('away');
+ const away=records.filter(d=>`${d.source_name}:${d.match.away_id}`===key);
+ assert.equal(await page.locator('.match-row').count(),away.length);assert.equal(await page.locator('#team-summary-title').innerText(),`${expected.name} · ${away.length} kayıtlı maç`);
+ await page.locator('#venue').selectOption('');
+ const latest=expected.form[0].record;await page.locator('#team-form button').first().click();assert.equal(new URL(page.url()).searchParams.get('match'),String(latest.match.id));
+ await page.locator('#team-search').fill('no-opponent-matches');assert.equal(await page.locator('#team-summary-empty').isVisible(),true);assert.equal(await page.locator('#team-summary-metrics').innerText(),'');
+ await page.locator('#team-search').fill('');await page.locator('#language').selectOption('en');assert.match(await page.locator('#team-summary-title').innerText(),/recorded matches/);assert.match(await page.locator('#team-summary-metrics').innerText(),/xG for per match/);
+ await page.locator('#team-trend summary').click();
+ assert.equal(await page.locator('#team-trend-chart g[role=button]').count(),Math.min(12,expected.matches));
+ const chartMatch=expected.series.slice(0,12).reverse()[0].record;
+ await page.locator('#team-trend-chart g[role=button]').first().focus();await page.keyboard.press('Enter');assert.equal(new URL(page.url()).searchParams.get('match'),String(chartMatch.match.id));
+ await page.locator('#theme').selectOption('dark');await page.locator('#team-summary').screenshot({path:'/tmp/team-summary-desktop.png'});
+ await page.setViewportSize({width:320,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.locator('#team-summary').screenshot({path:'/tmp/team-summary-mobile.png'});
+ // Day bounds constrain the report exactly like the list.
+ await page.locator('#match-picker>summary').click();await page.locator('.date-filter summary').click();await page.locator('#date-from').fill(latest.match.date.slice(0,10));await page.locator('#date-to').fill(latest.match.date.slice(0,10));await page.locator('#date-to').dispatchEvent('change');
+ assert.equal(await page.locator('#team-form button').count(),1);
+ const downloadPromise=page.waitForEvent('download');await page.locator('#export-team-csv').click();const download=await downloadPromise;
+ const csv=readFileSync(await download.path(),'utf8');assert.equal(csv.split('\r\n').length,3);assert.ok(csv.includes('conditional_win_probability'));assert.match(await page.locator('#team-summary-title').innerText(),/1 recorded match/);
+ await page.locator('#reset-filters').click();assert.equal(await page.locator('#team-summary').isHidden(),true);
+ assert.deepEqual(errors,[]);console.log('PASS selected-team scope, computed totals, form navigation, no-match state, TR/EN, dark theme, 320px, date bounds, clear');
+} finally {await browser.close();}
