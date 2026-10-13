@@ -200,3 +200,15 @@ anahtarlar okunmadı veya kaynak dosyasına konmadı.
 Pages işine yayın öncesi Python/Node/Ruff kontrolü eklendi. Takım armaları için
 uygun yeniden kullanım kaynağı doğrulanamadı; başharf gösterimi korunuyor,
 arma işi yayın engeli yerine açık MVP sonrası işi olarak kalıyor.
+
+MVP kaynakları f0efed8 ile main'e gönderildi. İlk yayın kurulumu pip editable paket
+keşfinde durdu; uv.lock kullanan ortamla düzeltildi. CI'de analysis.json Git dışı
+olduğu için i18n testi girdisini bulamadı; test öncesi coherent bundle build eklendi.
+Bu kapılar bozuk yayını önledi. fef5495 için Pages build/deploy başarılı:
+https://github.com/fluffydisk/goal-illusion/actions/runs/38368214397
+
+13 Ekim 2026 10:23 Berlin: 3869118 için gerçek İngilizce kabulü geçti. Tek POST,
+Gemini üretimi ve Groq bağımsız incelemesi; altı kart, attempt=0. Hazır sonuca GET
+ile ayrıca yerel kalite/kanıt doğrulaması uygulandı. Canlı tarayıcı: altı lig,
+Worker CORS/diller, iki maç CSV, TR/EN, koyu/320px, favori kalıcılığı, PWA install,
+offline reload/JSON download ve ağ geri dönüşü geçti. Tarayıcı testi AI POST yapmaz.

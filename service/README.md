@@ -107,3 +107,12 @@ bağımsız inceleme İngilizce talimat kullanır; yerel sayı/kanıt/iddia kont
 
 Bu özellik için Worker ve web kaynaklarını birlikte yayımla. Yerel testler gerçek
 model çağrısı yapmaz; sağlayıcıda İngilizce üretim ayrıca doğrulanmalıdır.
+
+
+## MVP canlı kabul sonucu — 13 Ekim 2026
+
+Worker `/health` Türkçe ve İngilizceyi bildiriyor. İngiltere–Senegal (3869118) için
+tek İngilizce üretim isteği gönderildi; altı kart Gemini tarafından üretildi ve
+Groq'un bağımsız incelemesiyle onaylandı. Hazır sonuç tekrar GET ile alınarak yerel
+sayısal/kanıt kontrolünden geçirildi; ikinci üretim başlatılmadı. Pages yayını,
+CORS ve çevrimdışı sayısal veri indirmesi gerçek tarayıcıda doğrulandı.

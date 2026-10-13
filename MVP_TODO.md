@@ -23,7 +23,7 @@ Tek bir bütün olarak ele alınmalı; yalnızca düğmeleri çevirmek yeterli d
 - [x] Türkçe kalite kontrolünü koru; İngilizce için bağımsız doğrulama ekle.
 - [x] Paylaşılan maç bağlantısı dil tercihini taşısın.
 
-Doğrulama: Aynı maç iki dilde açılır; farklı dillerin yorumları ve bekleyen işleri birbirine karışmaz. Birim ve tarayıcı testleri geçti. Gerçek sağlayıcıda İngilizce metin üretimi henüz denenmedi; UI testi yapay yanıtlar kullanır.
+Doğrulama: Aynı maç iki dilde açılır; farklı dillerin yorumları ve bekleyen işleri birbirine karışmaz. Birim ve tarayıcı testleri geçti. 13 Ekim 2026 canlı İngilizce kontrolünde İngiltere–Senegal için altı kart üretildi; Gemini üretimi ve Groq bağımsız incelemesi geçti. Yerel regresyon testleri yapay yanıtlar kullanır.
 
 Yayımlama: Worker ve Pages birlikte güncellenmeli. Arayüz eski sunucunun `/health` yanıtında İngilizce desteği yoksa İngilizce üretim başlatmaz. Yerel Streamlit sürümü bu aşamada Türkçe kalır.
 
@@ -85,9 +85,8 @@ Otomatik devam yalnızca mevcut kullanım penceresi için yetkilidir: 13 Ekim 20
 - [ ] Yayın öncesi Worker dil desteğini ve gerçek hedef ortamda PWA güncellemesini kontrol et.
 - [ ] Kaynak hakları netleştiğinde takım armaları; kullanıcı geri bildiriminden sonraki arayüz düzenlemeleri.
 
-Ardışık yerel çalışma için heartbeat PAUSED durumunda. Kullanıcının kapanma zamanlayıcısı
-nedeniyle yaklaşık 13 Ekim 03:15 Berlin daha erken çalışma sınırıdır. Değişiklikler
-commit/push/deploy edilmedi; bu adımlar ayrıca yetkilendirilmelidir.
+Önceki ardışık çalışmanın heartbeat otomasyonu PAUSED kaldı. O turdaki zamanlayıcı
+ve commit/push/deploy kısıtları, aşağıdaki yeni manuel yayın yetkisiyle güncellendi.
 
 
 ## MVP yayın çalışması — kullanıcı tarafından yetkilendirildi
@@ -99,10 +98,17 @@ sınırlamaz; heartbeat yeniden açılmayacak.
 - [x] Yerel Python/Node testleri ve Ruff kontrolü.
 - [x] Türkçe/İngilizce Worker dağıtımı.
 - [x] Pages dağıtımına yayın öncesi Python/Node test kapısı ekle.
-- [ ] MVP kaynaklarını GitHub main dalına gönder ve Pages işini doğrula.
-- [ ] Canlı sitede Türkçe/İngilizce, mobil, indirilen dosya ve PWA açılışını doğrula.
-- [ ] Canlı Worker'da gerçek İngilizce üretim ve bağımsız incelemeyi doğrula.
+- [x] MVP kaynaklarını GitHub main dalına gönder ve Pages işini doğrula.
+- [x] Canlı sitede Türkçe/İngilizce, mobil, indirilen dosya ve PWA açılışını doğrula.
+- [x] Canlı Worker'da gerçek İngilizce üretim ve bağımsız incelemeyi doğrula.
 - [ ] MVP sürüm notları ve GitHub sürüm kaydı.
 
 MVP sonrası: lisans/kaynak doğrulanınca takım armaları; kullanıcı geri bildirimine
 göre arayüz; yeni diller. Canlı skor ve maç öncesi tahmin bu MVP'ye dahil değil.
+
+
+## MVP sonrası önerilen küçük işler
+
+- [ ] Maç kimliği ve veri sürümünü içeren hata/geri bildirim bağlantısı.
+- [ ] Takım özeti ve seçili filtreleri taşıyan paylaşılabilir bağlantı.
+- [ ] Sayısal analizden skor/xG paylaşım görseli; kaynak ve veri tarihi dahil.

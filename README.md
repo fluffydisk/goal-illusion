@@ -1,5 +1,7 @@
 # Goal Illusion ⚽
 
+**MVP v0.1.0** · [Sürüm notları](RELEASE_NOTES.md)
+
 **Skor her şeyi anlatır mı?** Gerçek bir maçın şutlarını alır, xG değerlerinden olası
 skorları hesaplar ve maç sonucunu bu dağılımla karşılaştırır. Türkçe/İngilizce web
 arayüzü ve yerel Streamlit paneli sunar. Ziyaretçiler için API anahtarı veya hesap
@@ -191,7 +193,9 @@ node --test tests/*.test.mjs service/*.test.mjs
 ```
 
 UI kontrolleri `scripts/check_*_ui.mjs` dosyalarındadır; Playwright ve Chromium kullanır.
-`PLAYWRIGHT_MODULE` ile modülün konumu belirtilebilir. AI yanıtları bu testlerde
+`check_release_ui.mjs` canlı MVP kabul kontrolüdür; AI POST göndermez, daha önce
+onaylanmış İngilizce örneği okur. Diğer UI regresyon testleri yerel önizlemeyi kullanır.
+`PLAYWRIGHT_MODULE` ile modülün konumu belirtilebilir. Yerel UI testlerinde AI yanıtları
 sentetiktir; gerçek model üretimi başlatılmaz. Web dosyaları veya analiz paketi
 değiştirildikten sonra `build_service_worker.py` yeniden çalıştırılmalıdır.
 
